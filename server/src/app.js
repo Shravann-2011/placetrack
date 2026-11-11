@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiters');
 const authRoutes = require('./routes/auth.routes');
+const applicationRoutes = require('./routes/application.routes');
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/applications', applicationRoutes);
 
 // These two must stay LAST: unknown routes -> 404, any error -> JSON error
 app.use(notFound);
