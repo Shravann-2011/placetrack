@@ -11,8 +11,9 @@ const openapi = require('./docs/openapi');
 
 const app = express();
 
-// Render/Vercel sit behind a proxy; this lets rate limiting see the real client IP
-app.set('trust proxy', 1);
+// How many proxies sit in front of the app, so req.ip (used by rate limiting) is the
+// real visitor's IP. Locally: 1 (Vite dev proxy). Production: 2 (Vercel → Render).
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 
 app.use(express.json({ limit: '100kb' })); // read JSON bodies
 app.use(cookieParser()); // read cookies (for the refresh token)

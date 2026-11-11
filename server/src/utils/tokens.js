@@ -20,13 +20,15 @@ function signRefreshToken(user) {
 const isProd = () => process.env.NODE_ENV === 'production';
 
 // httpOnly = JavaScript in the browser cannot read it (protects against XSS).
-// In production the frontend (Vercel) and API (Render) are on different sites,
-// so the cookie must be sameSite 'none' + secure.
+// secure = only sent over HTTPS (in production).
+// sameSite 'lax': in production Vercel forwards /api to Render, so the browser
+// only ever talks to ONE site. The cookie is first-party, which avoids browsers
+// blocking it as a third-party cookie (Safari does this by default).
 function refreshCookieOptions() {
   return {
     httpOnly: true,
     secure: isProd(),
-    sameSite: isProd() ? 'none' : 'lax',
+    sameSite: 'lax',
     path: '/api/auth',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   };
