@@ -6,6 +6,8 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiters');
 const authRoutes = require('./routes/auth.routes');
 const applicationRoutes = require('./routes/application.routes');
+const swaggerUi = require('swagger-ui-express');
+const openapi = require('./docs/openapi');
 
 const app = express();
 
@@ -24,6 +26,13 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Interactive API docs at /api/docs, raw spec at /api/docs.json
+app.get('/api/docs.json', (req, res) => res.json(openapi));
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapi, {
+  customSiteTitle: 'PlaceTrack API docs',
+  swaggerOptions: { persistAuthorization: true },
+}));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/applications', applicationRoutes);
