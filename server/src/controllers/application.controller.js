@@ -26,9 +26,12 @@ async function listApplications(req, res) {
     filter.$or = [{ company: pattern }, { role: pattern }];
   }
   if (dueWithinDays) {
-    const now = new Date();
-    const until = new Date(now.getTime() + dueWithinDays * 24 * 60 * 60 * 1000);
-    filter.dueDate = { $gte: now, $lte: until };
+    // From the start of today, so something due earlier today still shows.
+    // Note: uses the server's timezone (UTC on Render), fine at day-level accuracy.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const until = new Date(startOfToday.getTime() + (dueWithinDays + 1) * 24 * 60 * 60 * 1000);
+    filter.dueDate = { $gte: startOfToday, $lt: until };
     filter.stage = filter.stage || { $nin: ['Offer', 'Rejected'] }; // only active ones
   }
 

@@ -1,0 +1,44 @@
+@import 'tailwindcss';
+
+/* Design tokens: change these to re-theme the whole app */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-slate-50 text-slate-900; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-brand-500; }
+}
+
+/* Reusable component classes. Tailwind v4 needs @utility (not @layer components)
+   for classes that are themselves used inside @apply, e.g. btn-primary uses btn. */
+@utility input {
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900
+    shadow-xs placeholder:text-slate-400 transition
+    focus:border-brand-500 focus:ring-4 focus:ring-brand-100 focus:outline-none
+    disabled:cursor-not-allowed disabled:bg-slate-50;
+}
+@utility input-error { @apply border-rose-400 focus:border-rose-500 focus:ring-rose-100; }
+@utility label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold
+    transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60;
+}
+@utility btn-primary { @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700; }
+@utility btn-secondary { @apply btn border border-slate-300 bg-white text-slate-700 shadow-xs hover:bg-slate-50; }
+@utility btn-ghost { @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900; }
+@utility btn-danger { @apply btn bg-rose-600 text-white shadow-sm hover:bg-rose-700; }
+@utility card { @apply rounded-xl border border-slate-200 bg-white shadow-xs; }
+
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(.98) } to { opacity: 1; transform: none } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
+.animate-fade-in { animation: fade-in .15s ease-out }
+.animate-pop-in { animation: pop-in .2s cubic-bezier(.2,.9,.3,1.2) }
+.animate-slide-up { animation: slide-up .25s ease-out }

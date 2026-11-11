@@ -16,8 +16,8 @@ const createApplicationSchema = z.object({
   stage: z.enum(STAGES).optional(),
   source: z.enum(SOURCES).optional(),
   location: z.string().trim().max(100).optional(),
-  ctc: z.number().min(0, 'CTC cannot be negative').max(1000).optional(),
-  jobLink: z.url('Enter a valid URL').optional(),
+  ctc: z.number().min(0, 'CTC cannot be negative').max(1000).nullable().optional(), // null clears it
+  jobLink: z.union([z.url({ protocol: /^https?$/, error: 'Enter a valid http(s) URL' }), z.literal('')], { error: 'Enter a valid http(s) URL' }).optional(), // '' clears it; only http/https (blocks javascript: links)
   appliedDate: dateField.optional(),
   dueDate: dateField.nullable().optional(), // null clears the deadline
   notes: z.string().max(2000).optional(),
