@@ -5,6 +5,7 @@ import { Icon, Logo } from './Icon';
 import { initials } from '../lib/format';
 
 const NAV = [
+  { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
   { to: '/applications', label: 'Applications', icon: 'briefcase' },
   { to: '/due-soon', label: 'Due Soon', icon: 'clock' },
 ];

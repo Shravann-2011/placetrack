@@ -8,10 +8,14 @@ const {
   listQuerySchema,
 } = require('../validators/application.schema');
 const ctrl = require('../controllers/application.controller');
+const { getStats } = require('../controllers/stats.controller');
 
 const router = express.Router();
 
 router.use(protect); // every route below requires a logged-in user
+
+// Must come before '/:id', otherwise Express would treat "stats" as an id
+router.get('/stats', getStats);
 
 router
   .route('/')

@@ -23,6 +23,6 @@ export function ProtectedRoute() {
 export function GuestRoute() {
   const { status } = useAuth();
   if (status === 'loading') return <FullPageLoader />;
-  if (status === 'authenticated') return <Navigate to="/applications" replace />;
+  if (status === 'authenticated') return <Navigate to="/dashboard" replace />;
   return <Outlet />;
 }

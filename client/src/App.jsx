@@ -5,6 +5,7 @@ import { GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
 import ApplicationsPage from './pages/ApplicationsPage';
+import DashboardPage from './pages/DashboardPage';
 import DueSoonPage from './pages/DueSoonPage';
 
 function NotFound() {
@@ -33,7 +34,8 @@ const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: '/', element: <Navigate to="/applications" replace /> },
+          { path: '/', element: <Navigate to="/dashboard" replace /> },
+          { path: '/dashboard', element: <DashboardPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
           { path: '/due-soon', element: <DueSoonPage /> },
         ],

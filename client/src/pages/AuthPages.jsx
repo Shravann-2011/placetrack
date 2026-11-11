@@ -77,7 +77,7 @@ function useAuthForm(initial, submit) {
     setBusy(true); setErrors({}); setFormError('');
     try {
       await submit(values);
-      navigate(location.state?.from?.pathname || '/applications', { replace: true });
+      navigate(location.state?.from?.pathname || '/dashboard', { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.details.length) setErrors(err.fieldErrors);
       else setFormError(err.message || 'Something went wrong');
