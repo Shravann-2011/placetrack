@@ -4,6 +4,9 @@ import { describeDue, formatCtc, formatDate } from '../lib/format';
 import { Icon } from '../components/Icon';
 import { CompanyAvatar, EmptyState, StageBadge } from '../components/ui';
 import { ApplicationFormModal } from '../components/ApplicationForm';
+import { ApplicationDrawer } from '../components/ApplicationDrawer';
+import { ConfirmDialog } from '../components/ui';
+import { useToast } from '../context/ToastContext';
 
 const RANGES = [7, 14, 30];
 const PILL = {
@@ -31,6 +34,14 @@ export default function DueSoonPage() {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [viewing, setViewing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const toast = useToast();
+  const reload = () => setReloadKey((k) => k + 1);
+  const confirmDelete = async () => {
+    try { await api(`/applications/${deleting._id}`, { method: 'DELETE' }); toast(`${deleting.company} deleted`); setDeleting(null); reload(); }
+    catch (err) { toast(err.message, 'error'); }
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -82,7 +93,7 @@ export default function DueSoonPage() {
                   {g.items.map((app) => {
                     const due = describeDue(app.dueDate);
                     return (
-                      <button key={app._id} onClick={() => setEditing(app)}
+                      <button key={app._id} onClick={() => setViewing(app)}
                         className="card group p-4 text-left transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md">
                         <div className="flex items-start gap-3">
                           <CompanyAvatar name={app.company} />
@@ -108,7 +119,11 @@ export default function DueSoonPage() {
         )}
       </div>
 
-      <ApplicationFormModal open={editing !== null} application={editing} onClose={() => setEditing(null)} onSaved={() => setReloadKey((k) => k + 1)} />
+      <ApplicationDrawer application={viewing} onClose={() => setViewing(null)} onChanged={reload}
+        onEdit={(a) => { setViewing(null); setEditing(a); }} onDelete={(a) => { setViewing(null); setDeleting(a); }} />
+      <ApplicationFormModal open={editing !== null} application={editing} onClose={() => setEditing(null)} onSaved={reload} />
+      <ConfirmDialog open={Boolean(deleting)} onClose={() => setDeleting(null)} onConfirm={confirmDelete}
+        title="Delete application?" message={<>This permanently removes <strong className="text-slate-900">{deleting?.company}</strong>.</>} />
     </div>
   );
 }

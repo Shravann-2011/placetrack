@@ -1,4 +1,4 @@
-import { createBrowserRouter, Link, Navigate, RouterProvider } from 'react-router';
+import { createBrowserRouter, Link, RouterProvider } from 'react-router';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
@@ -6,6 +6,7 @@ import { AppLayout } from './components/AppLayout';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
 import ApplicationsPage from './pages/ApplicationsPage';
 import DashboardPage from './pages/DashboardPage';
+import LandingPage from './pages/LandingPage';
 import DueSoonPage from './pages/DueSoonPage';
 
 function NotFound() {
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
+      { path: '/', element: <LandingPage /> }, // visitors see the landing page; logged-in users go to /dashboard
     ],
   },
   {
@@ -34,7 +36,6 @@ const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: '/', element: <Navigate to="/dashboard" replace /> },
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
           { path: '/due-soon', element: <DueSoonPage /> },

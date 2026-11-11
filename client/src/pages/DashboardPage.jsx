@@ -4,9 +4,11 @@ import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { describeDue } from '../lib/format';
 import { Icon } from '../components/Icon';
-import { CompanyAvatar, EmptyState, StageBadge } from '../components/ui';
+import { CompanyAvatar, ConfirmDialog, EmptyState, StageBadge } from '../components/ui';
+import { useToast } from '../context/ToastContext';
 import { ChartCard, FunnelChart, SourceChart, WeeklyChart } from '../components/charts';
 import { ApplicationFormModal } from '../components/ApplicationForm';
+import { ApplicationDrawer } from '../components/ApplicationDrawer';
 
 function StatTile({ label, value, sub, icon, to }) {
   const body = (
@@ -36,6 +38,10 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [viewing, setViewing] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const toast = useToast();
 
   useEffect(() => {
     let ignore = false;
@@ -126,7 +132,8 @@ export default function DashboardPage() {
               {upcoming.map((a) => {
                 const due = describeDue(a.dueDate);
                 return (
-                  <li key={a._id} className="flex items-center gap-3 py-3">
+                  <li key={a._id}>
+                    <button onClick={() => setViewing(a)} className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3 text-left transition hover:bg-slate-50">
                     <CompanyAvatar name={a.company} size="size-8" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-900">{a.company}</p>
@@ -134,6 +141,7 @@ export default function DashboardPage() {
                     </div>
                     <StageBadge stage={a.stage} className="hidden sm:inline-flex" />
                     <span className={`w-20 text-right text-sm ${due.urgency === 'urgent' ? 'font-semibold text-rose-600' : 'text-slate-600'}`}>{due.text}</span>
+                    </button>
                   </li>
                 );
               })}
@@ -142,6 +150,15 @@ export default function DashboardPage() {
         </ChartCard>
       </div>
       {modal}
+      <ApplicationDrawer application={viewing} onClose={() => setViewing(null)} onChanged={() => setReloadKey((k) => k + 1)}
+        onEdit={(a) => { setViewing(null); setEditing(a); }} onDelete={(a) => { setViewing(null); setDeleting(a); }} />
+      <ApplicationFormModal open={editing !== null} application={editing} onClose={() => setEditing(null)} onSaved={() => setReloadKey((k) => k + 1)} />
+      <ConfirmDialog open={Boolean(deleting)} onClose={() => setDeleting(null)}
+        onConfirm={async () => {
+          try { await api(`/applications/${deleting._id}`, { method: 'DELETE' }); toast(`${deleting.company} deleted`); setDeleting(null); setReloadKey((k) => k + 1); }
+          catch (err) { toast(err.message, 'error'); }
+        }}
+        title="Delete application?" message={<>This permanently removes <strong className="text-slate-900">{deleting?.company}</strong>.</>} />
     </div>
   );
 }

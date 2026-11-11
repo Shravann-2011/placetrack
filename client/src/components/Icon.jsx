@@ -1,5 +1,13 @@
 // Small inline icon set (stroke icons, 24x24) so we don't need an icon package
 const PATHS = {
+  arrowRight: 'M5 12h14M12 5l7 7-7 7',
+  shield: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+  target: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 18a6 6 0 100-12 6 6 0 000 12zM12 14a2 2 0 100-4 2 2 0 000 4z',
+  layers: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+  zap: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+  external: 'M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3',
+  rupee: 'M6 3h12M6 8h12M6 13l8.5 8M6 13h3a5 5 0 000-10',
+  keyboard: 'M20 5H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2zM7 15h10M6 9h.01M10 9h.01M14 9h.01M18 9h.01M8 12h.01M12 12h.01M16 12h.01',
   briefcase: 'M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2M2 13h20',
   board: 'M3 3h7v18H3zM14 3h7v10h-7z',
   chart: 'M3 3v18h18M7 16v-4M12 16V8M17 16v-7',

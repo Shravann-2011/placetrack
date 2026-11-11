@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { api } from '../lib/api';
 import { JOB_TYPES, SORT_OPTIONS, SOURCES, STAGES } from '../lib/constants';
@@ -9,6 +9,7 @@ import { Icon } from '../components/Icon';
 import { CompanyAvatar, ConfirmDialog, EmptyState, Pagination } from '../components/ui';
 import { StageSelect } from '../components/StageSelect';
 import { ApplicationFormModal } from '../components/ApplicationForm';
+import { ApplicationDrawer } from '../components/ApplicationDrawer';
 
 const LIMIT = 10;
 const DUE_STYLES = { past: 'text-slate-400', urgent: 'text-rose-600 font-semibold', soon: 'text-amber-600 font-medium', later: 'text-slate-600' };
@@ -78,7 +79,21 @@ export default function ApplicationsPage() {
   const [editing, setEditing] = useState(null); // null = closed, {} = new, app = edit
   const [deleting, setDeleting] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [viewing, setViewing] = useState(null); // application shown in the side panel
+  const searchRef = useRef(null);
   const toast = useToast();
+
+  // Keyboard shortcuts: "/" focuses search, "n" adds an application
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+      if (typing || e.metaKey || e.ctrlKey || e.altKey || document.querySelector('[role=dialog]')) return;
+      if (e.key === '/') { e.preventDefault(); searchRef.current?.focus(); }
+      if (e.key.toLowerCase() === 'n') { e.preventDefault(); setEditing({}); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   const setParam = useCallback((key, value) => {
     setParams((prev) => {
@@ -151,8 +166,9 @@ export default function ApplicationsPage() {
             {total === undefined ? 'Loading…' : filtersActive ? `${total} matching application${total === 1 ? '' : 's'}` : `${total} application${total === 1 ? '' : 's'} tracked`}
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setEditing({})}>
+        <button className="btn-primary" onClick={() => setEditing({})} title="Shortcut: N">
           <Icon name="plus" /> Add application
+          <kbd className="ml-1 hidden rounded bg-white/20 px-1.5 py-0.5 font-sans text-[11px] font-medium sm:inline">N</kbd>
         </button>
       </div>
 
@@ -160,8 +176,9 @@ export default function ApplicationsPage() {
       <div className="mt-6 flex flex-col gap-3 xl:flex-row xl:items-center">
         <div className="relative min-w-0 flex-1">
           <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input className="input pl-9" placeholder="Search company or role…" value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)} aria-label="Search applications" />
+          <input ref={searchRef} className="input pl-9 pr-10" placeholder="Search company or role…" value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && e.currentTarget.blur()} aria-label="Search applications" />
+          <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-slate-200 bg-slate-50 px-1.5 text-[11px] text-slate-400 sm:block">/</kbd>
         </div>
         <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
           <FilterSelect label="Filter by stage" value={stage} onChange={(v) => setParam('stage', v)} options={STAGES} placeholder="All stages" />
@@ -213,7 +230,7 @@ export default function ApplicationsPage() {
                       <div className="flex items-center gap-3">
                         <CompanyAvatar name={app.company} />
                         <div className="min-w-0">
-                          <button onClick={() => setEditing(app)} className="block max-w-full truncate font-semibold text-slate-900 hover:text-brand-700">{app.company}</button>
+                          <button onClick={() => setViewing(app)} className="block max-w-full truncate font-semibold text-slate-900 hover:text-brand-700">{app.company}</button>
                           <div className="truncate text-xs text-slate-500">{app.role} · {app.type}{app.location ? ` · ${app.location}` : ''}</div>
                         </div>
                       </div>
@@ -237,7 +254,7 @@ export default function ApplicationsPage() {
                   <div className="flex items-start gap-3">
                     <CompanyAvatar name={app.company} />
                     <div className="min-w-0 flex-1">
-                      <button onClick={() => setEditing(app)} className="block truncate text-left font-semibold text-slate-900">{app.company}</button>
+                      <button onClick={() => setViewing(app)} className="block truncate text-left font-semibold text-slate-900">{app.company}</button>
                       <p className="truncate text-xs text-slate-500">{app.role} · {app.type}</p>
                     </div>
                     <RowActions app={app} onEdit={setEditing} onDelete={setDeleting} />
@@ -257,6 +274,10 @@ export default function ApplicationsPage() {
         )}
       </div>
 
+      <ApplicationDrawer application={viewing} onClose={() => setViewing(null)}
+        onEdit={(a) => { setViewing(null); setEditing(a); }}
+        onDelete={(a) => { setViewing(null); setDeleting(a); }}
+        onChanged={(a) => setResult((r) => ({ ...r, data: r.data.map((x) => (x._id === a._id ? a : x)) }))} />
       <ApplicationFormModal open={editing !== null} application={editing} onClose={() => setEditing(null)} onSaved={reload} />
       <ConfirmDialog open={Boolean(deleting)} onClose={() => setDeleting(null)} onConfirm={confirmDelete} busy={busyId === deleting?._id}
         title="Delete application?" message={<>This permanently removes <strong className="text-slate-900">{deleting?.company}</strong> ({deleting?.role}) and its stage history.</>} />

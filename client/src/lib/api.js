@@ -1,6 +1,7 @@
 // A small fetch wrapper for the PlaceTrack API.
 // - Keeps the access token in memory (NOT localStorage, so XSS can't read it from storage)
 // - On a 401 it calls /auth/refresh once (using the httpOnly cookie) and retries
+import { notifyApplicationsChanged } from './events';
 const BASE = import.meta.env.VITE_API_URL || '/api';
 
 let accessToken = null;
@@ -59,6 +60,7 @@ export async function api(path, { method = 'GET', body, query, retry = true } = 
     }
   }
 
+  if (res.ok && method !== 'GET' && path.startsWith('/applications')) notifyApplicationsChanged();
   if (res.status === 204) return null;
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new ApiError(res.status, data);
