@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/Shravann-2011/placetrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Shravann-2011/placetrack/actions/workflows/ci.yml)
 
+**Live demo:** https://placetrack-five.vercel.app · **API docs:** https://placetrack-api-i0ko.onrender.com/api/docs
+
+> The API runs on Render's free tier and sleeps after 15 minutes idle, so the first request can take ~30–50 s.
+
 A job and internship application tracker for Indian campus placements. Track every application through the real placement rounds (**Applied → Aptitude/OA → GD → Technical → HR → Offer / Rejected**), never miss a deadline, and see what's working.
 
 ## Features
@@ -24,6 +28,14 @@ A job and internship application tracker for Indian campus placements. Track eve
 | Database | MongoDB Atlas |
 | Testing | Jest 30, Supertest, mongodb-memory-server |
 | Docs / CI | OpenAPI 3 + Swagger UI, GitHub Actions |
+
+## Deployment
+
+| Part | Host | Notes |
+|---|---|---|
+| Frontend | Vercel (`client/`) | `vercel.json` forwards `/api/*` to Render, so the browser sees one site and the refresh cookie is first-party |
+| API | Render (`server/`) | `npm ci` / `npm start`, env vars: `NODE_ENV=production`, `TRUST_PROXY=2`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` |
+| Database | MongoDB Atlas | |
 
 ## Run it locally
 
