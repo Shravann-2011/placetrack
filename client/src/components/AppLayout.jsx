@@ -9,6 +9,7 @@ import { onApplicationsChanged } from '../lib/events';
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
   { to: '/applications', label: 'Applications', icon: 'briefcase', count: (t) => t.total },
+  { to: '/board', label: 'Board', icon: 'board' },
   { to: '/due-soon', label: 'Due Soon', icon: 'clock', count: (t) => t.dueThisWeek, alert: true },
 ];
 

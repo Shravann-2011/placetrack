@@ -6,6 +6,7 @@ import { AppLayout } from './components/AppLayout';
 import { LoginPage, RegisterPage } from './pages/AuthPages';
 import ApplicationsPage from './pages/ApplicationsPage';
 import DashboardPage from './pages/DashboardPage';
+import BoardPage from './pages/BoardPage';
 import LandingPage from './pages/LandingPage';
 import DueSoonPage from './pages/DueSoonPage';
 
@@ -38,6 +39,7 @@ const router = createBrowserRouter([
         children: [
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/applications', element: <ApplicationsPage /> },
+          { path: '/board', element: <BoardPage /> },
           { path: '/due-soon', element: <DueSoonPage /> },
         ],
       },
