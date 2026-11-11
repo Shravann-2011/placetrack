@@ -10,6 +10,8 @@ import { CompanyAvatar, ConfirmDialog, EmptyState, Pagination } from '../compone
 import { StageSelect } from '../components/StageSelect';
 import { ApplicationFormModal } from '../components/ApplicationForm';
 import { ApplicationDrawer } from '../components/ApplicationDrawer';
+import { celebrate } from '../lib/confetti';
+import { motion } from 'motion/react';
 
 const LIMIT = 10;
 const DUE_STYLES = { past: 'text-slate-400', urgent: 'text-rose-600 font-semibold', soon: 'text-amber-600 font-medium', later: 'text-slate-600' };
@@ -130,7 +132,8 @@ export default function ApplicationsPage() {
     setResult((r) => ({ ...r, data: r.data.map((a) => (a._id === app._id ? { ...a, stage: newStage } : a)) }));
     try {
       await api(`/applications/${app._id}/stage`, { method: 'PATCH', body: { stage: newStage } });
-      toast(`${app.company} moved to ${newStage}`);
+      if (newStage === 'Offer') celebrate();
+      toast(newStage === 'Offer' ? `🎉 Offer from ${app.company}! Congratulations!` : `${app.company} moved to ${newStage}`);
     } catch (err) {
       setResult((r) => ({ ...r, data: r.data.map((a) => (a._id === app._id ? { ...a, stage: old } : a)) }));
       toast(err.message, 'error');
@@ -223,8 +226,9 @@ export default function ApplicationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {apps.map((app) => (
-                  <tr key={app._id} className="group transition hover:bg-slate-50/70">
+                {apps.map((app, i) => (
+                  <motion.tr key={app._id} className="group transition-colors hover:bg-slate-50/70"
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025, duration: 0.2 }}>
                     {/* w-full + max-w-0 lets this cell shrink and truncate long text instead of widening the table */}
                     <td className="w-full max-w-0 px-6 py-3.5">
                       <div className="flex items-center gap-3">
@@ -241,7 +245,7 @@ export default function ApplicationsPage() {
                     <td className="hidden whitespace-nowrap px-3 py-3.5 text-slate-600 2xl:table-cell">{formatDate(app.appliedDate)}</td>
                     <td className="px-3 py-3.5"><DueCell date={app.dueDate} /></td>
                     <td className="px-4 py-3.5"><RowActions app={app} onEdit={setEditing} onDelete={setDeleting} /></td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>

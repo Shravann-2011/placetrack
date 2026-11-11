@@ -7,23 +7,31 @@ import { Icon } from '../components/Icon';
 import { CompanyAvatar, ConfirmDialog, EmptyState, StageBadge } from '../components/ui';
 import { useToast } from '../context/ToastContext';
 import { ChartCard, FunnelChart, SourceChart, WeeklyChart } from '../components/charts';
+import { CountUp } from '../components/CountUp';
+import { motion } from 'motion/react';
 import { ApplicationFormModal } from '../components/ApplicationForm';
 import { ApplicationDrawer } from '../components/ApplicationDrawer';
 
-function StatTile({ label, value, sub, icon, to }) {
+function StatTile({ label, value, suffix = '', sub, icon, to, index = 0 }) {
   const body = (
     <>
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate-500">{label}</p>
         <div className="grid size-8 place-items-center rounded-lg bg-brand-50 text-brand-600"><Icon name={icon} /></div>
       </div>
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900"><CountUp value={value} suffix={suffix} /></p>
       {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
     </>
   );
+  // Tiles rise in one after another and lift slightly on hover
+  const motionProps = {
+    initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 },
+    transition: { delay: index * 0.07, type: 'spring', stiffness: 260, damping: 24 },
+    whileHover: to ? { y: -3 } : undefined,
+  };
   return to
-    ? <Link to={to} className="card block p-5 transition hover:border-brand-200 hover:shadow-md">{body}</Link>
-    : <div className="card p-5">{body}</div>;
+    ? <motion.div {...motionProps}><Link to={to} className="card block h-full p-5 transition-shadow hover:border-brand-200 hover:shadow-md">{body}</Link></motion.div>
+    : <motion.div {...motionProps} className="card p-5">{body}</motion.div>;
 }
 
 function greeting() {
@@ -100,10 +108,10 @@ export default function DashboardPage() {
       {header}
 
       <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatTile label="Applications" icon="briefcase" value={t.total} sub={`${weekCount} this week`} to="/applications" />
-        <StatTile label="In progress" icon="clock" value={t.active} sub={`${t.dueThisWeek} deadline${t.dueThisWeek === 1 ? '' : 's'} this week`} to="/due-soon" />
-        <StatTile label="Response rate" icon="inbox" value={`${Math.round(t.responseRate * 100)}%`} sub="Companies that replied" />
-        <StatTile label="Offers" icon="sparkles" value={t.offers} sub={`${t.rejected} rejected`} to="/applications?stage=Offer" />
+        <StatTile index={0} label="Applications" icon="briefcase" value={t.total} sub={`${weekCount} this week`} to="/applications" />
+        <StatTile index={1} label="In progress" icon="clock" value={t.active} sub={`${t.dueThisWeek} deadline${t.dueThisWeek === 1 ? '' : 's'} this week`} to="/due-soon" />
+        <StatTile index={2} label="Response rate" icon="inbox" value={Math.round(t.responseRate * 100)} suffix="%" sub="Companies that replied" />
+        <StatTile index={3} label="Offers" icon="sparkles" value={t.offers} sub={`${t.rejected} rejected`} to="/applications?stage=Offer" />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">

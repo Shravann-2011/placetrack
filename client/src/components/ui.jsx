@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { STAGE_STYLES } from '../lib/constants';
 import { initials } from '../lib/format';
 import { Icon } from './Icon';
@@ -51,11 +52,16 @@ export function Modal({ open, onClose, title, description, children, size = 'max
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
   }, [open, onClose]);
 
-  if (!open) return null;
   return (
+    <AnimatePresence>
+      {open && (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div className="animate-fade-in absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className={`animate-pop-in relative flex max-h-[92vh] w-full ${size} flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl`}>
+      <motion.div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+      <motion.div className={`relative flex max-h-[92vh] w-full ${size} flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl`}
+        initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.98, transition: { duration: 0.15 } }}
+        transition={{ type: 'spring', stiffness: 380, damping: 30 }}>
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
           <div>
             <h2 id="modal-title" className="text-lg font-semibold text-slate-900">{title}</h2>
@@ -66,8 +72,10 @@ export function Modal({ open, onClose, title, description, children, size = 'max
           </button>
         </div>
         <div className="overflow-y-auto">{children}</div>
-      </div>
+      </motion.div>
     </div>
+      )}
+    </AnimatePresence>
   );
 }
 

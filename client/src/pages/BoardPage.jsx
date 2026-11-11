@@ -8,6 +8,8 @@ import { Icon } from '../components/Icon';
 import { CompanyAvatar, ConfirmDialog, EmptyState } from '../components/ui';
 import { ApplicationDrawer } from '../components/ApplicationDrawer';
 import { ApplicationFormModal } from '../components/ApplicationForm';
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
+import { celebrate } from '../lib/confetti';
 
 const DUE_PILL = {
   urgent: 'bg-rose-50 text-rose-700',
@@ -34,6 +36,10 @@ function MoveMenu({ app, onMove }) {
 function BoardCard({ app, onOpen, onMove, onDragStart, onDragEnd, dragging }) {
   const due = describeDue(app.dueDate);
   return (
+    <motion.div layout layoutId={app._id}
+      initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+      whileHover={{ y: -2 }}>
     <article
       draggable
       onDragStart={(e) => onDragStart(e, app)}
@@ -57,6 +63,7 @@ function BoardCard({ app, onOpen, onMove, onDragStart, onDragEnd, dragging }) {
         ) : <span className="text-slate-400">{app.type === 'Internship' ? 'Internship' : app.source}</span>}
       </div>
     </article>
+    </motion.div>
   );
 }
 
@@ -99,6 +106,7 @@ export default function BoardPage() {
     try {
       const res = await api(`/applications/${app._id}/stage`, { method: 'PATCH', body: { stage } });
       setApps((list) => list.map((a) => (a._id === app._id ? res.data : a)));
+      if (stage === 'Offer') celebrate();
       toast(stage === 'Offer' ? `🎉 Offer from ${app.company}! Congratulations!` : `${app.company} moved to ${stage}`);
     } catch (err) {
       setApps(before);
@@ -158,6 +166,8 @@ export default function BoardPage() {
 
       {/* Columns scroll sideways; the negative margin lets them reach the screen edge on phones */}
       <div className="-mx-4 mt-6 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 [scrollbar-width:thin]">
+        {/* LayoutGroup lets a card animate smoothly from one column to another */}
+        <LayoutGroup>
         <div className="flex min-w-max snap-x snap-mandatory gap-4 sm:snap-none">
           {columns.map(({ stage, items }) => {
             const s = STAGE_STYLES[stage];
@@ -169,15 +179,20 @@ export default function BoardPage() {
                 <header className="flex items-center gap-2 px-1.5 pb-3 pt-1">
                   <span className={`size-2 rounded-full ${s.dot}`} aria-hidden="true" />
                   <h2 className="text-sm font-semibold text-slate-800">{stage}</h2>
-                  <span className="rounded-full bg-white px-2 text-xs font-medium text-slate-500 tabular-nums ring-1 ring-slate-200">{apps ? items.length : '·'}</span>
+                  <motion.span key={apps ? items.length : 'x'} initial={{ scale: 0.7 }} animate={{ scale: 1 }}
+                    className="rounded-full bg-white px-2 text-xs font-medium text-slate-500 tabular-nums ring-1 ring-slate-200">{apps ? items.length : '·'}</motion.span>
                 </header>
                 <div className="flex min-h-24 flex-1 flex-col gap-2">
                   {!apps
                     ? Array.from({ length: stage === 'Applied' ? 3 : 1 }, (_, i) => <div key={i} className="h-[88px] animate-pulse rounded-xl bg-white/70" />)
-                    : items.map((app) => (
-                      <BoardCard key={app._id} app={app} dragging={draggingId === app._id}
-                        onOpen={setViewing} onMove={move} onDragStart={onDragStart} onDragEnd={onDragEnd} />
-                    ))}
+                    : (
+                      <AnimatePresence initial={false} mode="popLayout">
+                        {items.map((app) => (
+                          <BoardCard key={app._id} app={app} dragging={draggingId === app._id}
+                            onOpen={setViewing} onMove={move} onDragStart={onDragStart} onDragEnd={onDragEnd} />
+                        ))}
+                      </AnimatePresence>
+                    )}
                   {apps && items.length === 0 && (
                     <div className={`grid flex-1 place-items-center rounded-xl border-2 border-dashed px-3 py-6 text-center text-xs transition-colors ${
                       isOver ? 'border-brand-300 text-brand-700' : 'border-slate-200 text-slate-400'}`}>
@@ -190,6 +205,7 @@ export default function BoardPage() {
             );
           })}
         </div>
+        </LayoutGroup>
       </div>
 
       <ApplicationDrawer application={viewing} onClose={() => setViewing(null)}

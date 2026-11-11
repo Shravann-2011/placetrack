@@ -3,12 +3,15 @@
 // 4px rounded data-end and square baseline, hairline grid, a hover/focus tooltip on
 // every mark, and a table view so no value is only available on hover.
 import { useState } from 'react';
+import { motion } from 'motion/react';
 import { STAGE_STYLES } from '../lib/constants';
 
 export function ChartCard({ title, subtitle, table, children, action }) {
   const [view, setView] = useState('chart');
   return (
-    <section className="card flex flex-col p-5 sm:p-6">
+    <motion.section className="card flex flex-col p-5 sm:p-6"
+      initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
@@ -29,7 +32,7 @@ export function ChartCard({ title, subtitle, table, children, action }) {
         </div>
       </div>
       <div className="flex-1">{view === 'chart' ? children : <DataTable {...table} />}</div>
-    </section>
+    </motion.section>
   );
 }
 
@@ -80,9 +83,14 @@ export function FunnelChart({ data }) {
             <div className="flex items-center gap-2">
               {/* Width is a share of the row minus room for the label, and flex-none stops
                   the label from squeezing the bar (which made 12 look shorter than 9) */}
-              <div className="h-5 flex-none rounded-r bg-brand-600 transition-colors group-hover/mark:bg-brand-700"
-                style={{ width: d.count ? `max(calc((100% - 2.5rem) * ${d.count / max}), 3px)` : 0 }} />
-              <span className="text-sm font-semibold text-slate-900 tabular-nums">{d.count}</span>
+              <motion.div className="h-5 flex-none origin-left rounded-r bg-brand-600 transition-colors group-hover/mark:bg-brand-700"
+                style={{ width: d.count ? `max(calc((100% - 2.5rem) * ${d.count / max}), 3px)` : 0 }}
+                initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.08, duration: 0.6, ease: [0.16, 1, 0.3, 1] }} />
+              <motion.span className="text-sm font-semibold text-slate-900 tabular-nums"
+                initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.3 + i * 0.08 }}>
+                {d.count}
+              </motion.span>
             </div>
             <span className="text-right text-xs text-slate-500 tabular-nums">{conversion === null ? '' : pct(conversion)}</span>
             <Tip value={d.count} label={conversion === null ? 'applications' : `reached ${d.stage} · ${pct(conversion)} of previous round`} className="-top-8 left-28" />
@@ -122,8 +130,10 @@ export function WeeklyChart({ data }) {
               <div key={d.weekStart} tabIndex={0} aria-label={`Week of ${label(d.weekStart)}: ${d.count} applications`}
                 className="group/mark relative flex h-full flex-1 flex-col items-center justify-end outline-offset-2">
                 <div className="flex w-full flex-1 items-end justify-center pb-px">
-                  <div className={`w-full max-w-6 rounded-t transition-colors ${isCurrent ? 'bg-brand-600' : 'bg-brand-500/70'} group-hover/mark:bg-brand-700`}
-                    style={{ height: `${(d.count / top) * 100}%` }} />
+                  <motion.div className={`w-full max-w-6 origin-bottom rounded-t transition-colors ${isCurrent ? 'bg-brand-600' : 'bg-brand-500/70'} group-hover/mark:bg-brand-700`}
+                    style={{ height: `${(d.count / top) * 100}%` }}
+                    initial={{ scaleY: 0 }} whileInView={{ scaleY: 1 }} viewport={{ once: true }}
+                    transition={{ delay: i * 0.05, duration: 0.55, ease: [0.16, 1, 0.3, 1] }} />
                 </div>
                 {/* Label every other week (counting back from this week) so labels never collide */}
                 <span className={`h-6 whitespace-nowrap pt-1.5 text-[11px] leading-none ${isCurrent ? 'font-semibold text-slate-700' : 'text-slate-400'}`}>
@@ -151,8 +161,9 @@ export function SourceChart({ data }) {
             <span><span className="font-semibold text-slate-900 tabular-nums">{pct(d.rate)}</span>
               <span className="ml-1.5 text-xs text-slate-500 tabular-nums">{d.responded} of {d.total}</span></span>
           </div>
-          <div className="h-2 rounded-full bg-brand-100">
-            <div className="h-2 rounded-full bg-brand-600 transition-colors group-hover/mark:bg-brand-700" style={{ width: `${d.rate * 100}%` }} />
+          <div className="h-2 overflow-hidden rounded-full bg-brand-100">
+            <motion.div className="h-2 origin-left rounded-full bg-brand-600 transition-colors group-hover/mark:bg-brand-700" style={{ width: `${d.rate * 100}%` }}
+              initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} />
           </div>
           <Tip value={pct(d.rate)} label={`replied · ${d.offers} offer${d.offers === 1 ? '' : 's'}`} className="-top-8 right-0" />
         </li>

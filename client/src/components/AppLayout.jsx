@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { Spinner } from './ui';
 import { NavLink, Outlet, useLocation } from 'react-router';
+import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { Icon, Logo } from './Icon';
 import { initials } from '../lib/format';
@@ -33,13 +35,22 @@ function NavItems({ onNavigate, totals }) {
         return (
           <NavLink key={item.to} to={item.to} onClick={onNavigate}
             className={({ isActive }) =>
-              `group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                isActive ? 'bg-white text-brand-700 shadow-xs ring-1 ring-slate-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
-            <Icon name={item.icon} className="size-[18px]" />
-            <span className="flex-1">{item.label}</span>
-            {count > 0 && (
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
-                item.alert ? 'bg-rose-100 text-rose-700' : 'bg-slate-200/70 text-slate-600'}`}>{count}</span>
+              `group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                isActive ? 'text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <motion.span layoutId={onNavigate ? 'nav-active-mobile' : 'nav-active'} className="absolute inset-0 rounded-lg bg-white shadow-xs ring-1 ring-slate-200"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
+                )}
+                <Icon name={item.icon} className="relative size-[18px]" />
+                <span className="relative flex-1">{item.label}</span>
+                {count > 0 && (
+                  <motion.span key={count} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    className={`relative rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
+                    item.alert ? 'bg-rose-100 text-rose-700' : 'bg-slate-200/70 text-slate-600'}`}>{count}</motion.span>
+                )}
+              </>
             )}
           </NavLink>
         );
@@ -116,9 +127,13 @@ export function AppLayout() {
       )}
 
       <main className="lg:pl-64">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-          <Outlet />
-        </div>
+        {/* Re-keyed on every route change so each page fades/slides in */}
+        <motion.div key={location.pathname} className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10"
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}>
+          <Suspense fallback={<div className="grid h-64 place-items-center text-brand-600"><Spinner className="size-6" /></div>}>
+            <Outlet />
+          </Suspense>
+        </motion.div>
       </main>
     </div>
   );

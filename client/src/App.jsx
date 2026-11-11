@@ -1,14 +1,21 @@
 import { createBrowserRouter, Link, RouterProvider } from 'react-router';
+import { MotionConfig } from 'motion/react';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
-import { LoginPage, RegisterPage } from './pages/AuthPages';
-import ApplicationsPage from './pages/ApplicationsPage';
-import DashboardPage from './pages/DashboardPage';
-import BoardPage from './pages/BoardPage';
-import LandingPage from './pages/LandingPage';
-import DueSoonPage from './pages/DueSoonPage';
+import { lazy, Suspense } from 'react';
+import { FullPageLoader } from './components/ProtectedRoute';
+
+// Code splitting: each page is downloaded only when it is first visited,
+// so the landing page doesn't make visitors download the whole app.
+const LoginPage = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.RegisterPage })));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ApplicationsPage = lazy(() => import('./pages/ApplicationsPage'));
+const BoardPage = lazy(() => import('./pages/BoardPage'));
+const DueSoonPage = lazy(() => import('./pages/DueSoonPage'));
 
 function NotFound() {
   return (
@@ -50,10 +57,15 @@ const router = createBrowserRouter([
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <RouterProvider router={router} />
-      </ToastProvider>
-    </AuthProvider>
+    // reducedMotion="user": respects the OS "Reduce motion" setting automatically
+    <MotionConfig reducedMotion="user">
+      <AuthProvider>
+        <ToastProvider>
+          <Suspense fallback={<FullPageLoader />}>
+            <RouterProvider router={router} />
+          </Suspense>
+        </ToastProvider>
+      </AuthProvider>
+    </MotionConfig>
   );
 }
