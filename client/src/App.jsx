@@ -6,6 +6,7 @@ import { GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
 import { lazy, Suspense } from 'react';
 import { FullPageLoader } from './components/ProtectedRoute';
+import { WakeBanner } from './components/WakeBanner';
 
 // Code splitting: each page is downloaded only when it is first visited,
 // so the landing page doesn't make visitors download the whole app.
@@ -61,6 +62,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <AuthProvider>
         <ToastProvider>
+          <WakeBanner />
           <Suspense fallback={<FullPageLoader />}>
             <RouterProvider router={router} />
           </Suspense>
