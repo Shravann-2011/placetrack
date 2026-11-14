@@ -4,30 +4,43 @@
 
 **Live demo:** https://placetrack-five.vercel.app · **API docs:** https://placetrack-api-i0ko.onrender.com/api/docs
 
-> The API runs on Render's free tier and sleeps after 15 minutes idle, so the first request can take ~30–50 s.
+> The API runs on Render's free tier. A GitHub Actions job pings it every 10 minutes to keep it awake; if it is asleep, the site shows a "Waking up the server" banner and retries automatically.
 
-A job and internship application tracker for Indian campus placements. Track every application through the real placement rounds (**Applied → Aptitude/OA → GD → Technical → HR → Offer / Rejected**), never miss a deadline, and see what's working.
+A job and internship application tracker for Indian campus placements. Track every application through the real placement rounds (**Applied → Aptitude/OA → GD → Technical → HR → Offer / Rejected**), see every OA, GD and interview on one calendar, prepare for each round, and compare your offers.
 
 ## Features
 
-- **Auth:** register / login with JWT access tokens (15 min, kept in memory) and httpOnly refresh-token cookies (7 days) with rotation and revocation on logout
-- **Applications:** create, edit, delete; scoped per user; search, filter by stage / source / type, sort, pagination
-- **Kanban board:** drag cards between stages (with a "Move to" menu for touch and keyboard)
-- **Dashboard:** stage funnel, applications per week, response rate by source, upcoming deadlines
-- **Due Soon:** deadlines in the next 7 / 14 / 30 days, grouped by urgency
-- **Detail panel:** full stage timeline for every application
-- **Security:** bcrypt password hashing, Zod validation, rate limiting, http(s)-only job links, consistent JSON errors
-- **Quality:** 38 API tests (94% coverage), Swagger docs, GitHub Actions CI
+**Problems students face, and how PlaceTrack solves them**
+
+| Problem | Feature |
+|---|---|
+| Deadlines are scattered across email, WhatsApp and the placement portal | **Calendar** with month, week and agenda views of every registration deadline, OA, GD, interview and offer deadline |
+| One application has many dates | **Rounds per application**: type, time, online / on-campus, venue or link, notes |
+| Two rounds at the same time | **Clash warnings** when an event overlaps another, plus ⚠ badges on the calendar |
+| No reminders | **Add to Google Calendar** in one click, or **export an .ics file** with a reminder 1 hour before each round |
+| Scattered preparation | **Prep checklist per round** with suggestions for each round type, an "x/y ready" badge, and a "what was asked" note for afterwards |
+| Applications go quiet and are forgotten | **"Gone quiet" nudge**: active applications with no update in 14+ days (and no round booked), with *Followed up* / *Mark rejected* actions |
+| Comparing offers is confusing | **Offers page**: total CTC, fixed and variable pay, joining bonus, bond, location, joining date and accept-by countdown side by side, best values highlighted |
+| Lost in 40 applications | Search, filters, sorting, pagination, a **Kanban board** (drag and drop, or a "Move to" menu on touch screens) and a **Due Soon** view |
+| Not sure what is working | **Dashboard**: stage funnel, applications per week, response rate by source |
+
+**Also**
+
+- **Auth:** JWT access tokens (15 min, kept in memory) and httpOnly refresh-token cookies (7 days) with rotation and revocation on logout
+- **Detail panel:** stage timeline and rounds for every application
+- **Design:** poster-style UI (Archivo Black headings, forest green / cream / lime / pink), animations that respect the OS reduced-motion setting, mobile bottom tab bar
+- **Security:** bcrypt password hashing, Zod validation, rate limiting, http(s)-only job links, per-user data scoping, consistent JSON errors
+- **Quality:** 56 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
 
 ## Tech stack
 
 | Layer | Tools |
 |---|---|
-| Frontend | React 19, Vite 8, React Router 8, Tailwind CSS 4 |
+| Frontend | React 19, Vite 8, React Router 8, Tailwind CSS 4, Motion |
 | Backend | Node.js 24, Express 5, Mongoose 9, Zod 4, JWT, bcryptjs, express-rate-limit |
 | Database | MongoDB Atlas |
 | Testing | Jest 30, Supertest, mongodb-memory-server |
-| Docs / CI | OpenAPI 3 + Swagger UI, GitHub Actions |
+| Docs / CI | OpenAPI 3 + Swagger UI, GitHub Actions (CI + keep-alive) |
 
 ## Deployment
 
@@ -64,7 +77,7 @@ Optional demo data: `cd server && npm run seed:demo`, then log in with `demo@pla
 | `npm start` | Start the API |
 | `npm test` | Run the test suite (in-memory MongoDB, no Atlas needed) |
 | `npm run test:coverage` | Tests plus coverage report |
-| `npm run seed:demo` | Create or reset the demo account |
+| `npm run seed:demo` | Create or reset the demo account (applications, calendar events, offers) |
 
 ## API
 
@@ -82,6 +95,9 @@ Interactive docs: **http://localhost:4000/api/docs** (raw spec at `/api/docs.jso
 | GET | `/api/applications/stats` | Dashboard statistics |
 | GET / PATCH / DELETE | `/api/applications/:id` | Read, update, delete |
 | PATCH | `/api/applications/:id/stage` | Change stage (Kanban) |
+| GET | `/api/events?from=&to=` | Calendar events in a date range |
+| POST | `/api/events` | Add a round or deadline (reply lists any clashes) |
+| PATCH / DELETE | `/api/events/:id` | Update (checklist, debrief, done) or delete |
 
 ## Project structure
 
