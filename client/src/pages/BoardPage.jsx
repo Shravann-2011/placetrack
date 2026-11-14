@@ -145,8 +145,8 @@ export default function BoardPage() {
     <div className="animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Board</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="display text-4xl text-ink sm:text-5xl">Board</h1>
+          <p className="mt-2 text-sm text-slate-600">
             <span className="hidden sm:inline">Drag cards between rounds as you progress.</span>
             <span className="sm:hidden">Tap ⌄ on a card to move it to another round.</span>
           </p>

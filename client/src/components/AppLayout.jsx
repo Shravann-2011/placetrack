@@ -1,18 +1,19 @@
 import { Suspense, useEffect, useState } from 'react';
-import { Spinner } from './ui';
 import { NavLink, Outlet, useLocation } from 'react-router';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { Icon, Logo } from './Icon';
+import { Spinner } from './ui';
 import { initials } from '../lib/format';
 import { api } from '../lib/api';
 import { onApplicationsChanged } from '../lib/events';
 
 const NAV = [
-  { to: '/dashboard', label: 'Dashboard', icon: 'chart' },
-  { to: '/applications', label: 'Applications', icon: 'briefcase', count: (t) => t.total },
-  { to: '/board', label: 'Board', icon: 'board' },
-  { to: '/due-soon', label: 'Due Soon', icon: 'clock', count: (t) => t.dueThisWeek, alert: true },
+  { to: '/dashboard', label: 'Dashboard', short: 'Home', icon: 'home' },
+  { to: '/calendar', label: 'Calendar', short: 'Calendar', icon: 'calendar' },
+  { to: '/applications', label: 'Applications', short: 'Apps', icon: 'briefcase', count: (t) => t.total },
+  { to: '/board', label: 'Board', short: 'Board', icon: 'board' },
+  { to: '/due-soon', label: 'Due Soon', short: 'Due', icon: 'clock', count: (t) => t.dueThisWeek, alert: true },
 ];
 
 // Live counts next to the nav items; refreshes whenever an application changes
@@ -26,29 +27,23 @@ function useNavCounts() {
   return totals;
 }
 
-function NavItems({ onNavigate, totals }) {
+function SideNav({ totals, onNavigate, layoutKey }) {
   return (
     <nav className="space-y-1">
-      <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Menu</p>
       {NAV.map((item) => {
         const count = totals && item.count ? item.count(totals) : 0;
         return (
           <NavLink key={item.to} to={item.to} onClick={onNavigate}
-            className={({ isActive }) =>
-              `group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive ? 'text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+            className={({ isActive }) => `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+              isActive ? 'text-ink' : 'text-cream/70 hover:bg-white/5 hover:text-cream'}`}>
             {({ isActive }) => (
               <>
-                {isActive && (
-                  <motion.span layoutId={onNavigate ? 'nav-active-mobile' : 'nav-active'} className="absolute inset-0 rounded-lg bg-white shadow-xs ring-1 ring-slate-200"
-                    transition={{ type: 'spring', stiffness: 500, damping: 35 }} />
-                )}
+                {isActive && <motion.span layoutId={layoutKey} className="absolute inset-0 rounded-xl bg-lime" transition={{ type: 'spring', stiffness: 500, damping: 36 }} />}
                 <Icon name={item.icon} className="relative size-[18px]" />
                 <span className="relative flex-1">{item.label}</span>
                 {count > 0 && (
-                  <motion.span key={count} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                    className={`relative rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
-                    item.alert ? 'bg-rose-100 text-rose-700' : 'bg-slate-200/70 text-slate-600'}`}>{count}</motion.span>
+                  <span className={`relative rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                    isActive ? 'bg-ink text-lime' : item.alert ? 'bg-coral text-ink' : 'bg-white/10 text-cream'}`}>{count}</span>
                 )}
               </>
             )}
@@ -59,74 +54,92 @@ function NavItems({ onNavigate, totals }) {
   );
 }
 
-function ShortcutHint() {
-  return (
-    <div className="mb-3 hidden rounded-xl border border-dashed border-slate-200 p-3 text-xs text-slate-500 lg:block">
-      <p className="mb-1.5 flex items-center gap-1.5 font-medium text-slate-600"><Icon name="keyboard" className="size-3.5" /> Shortcuts</p>
-      <p><kbd className="rounded border border-slate-200 bg-white px-1.5">N</kbd> new application</p>
-      <p className="mt-1"><kbd className="rounded border border-slate-200 bg-white px-1.5">/</kbd> search</p>
-    </div>
-  );
-}
-
 function UserCard() {
   const { user, logout } = useAuth();
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
-      <div className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-violet-500 text-xs font-bold text-white">
-        {initials(user?.name)}
-      </div>
+    <div className="flex items-center gap-3 rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
+      <div className="grid size-9 shrink-0 place-items-center rounded-full bg-pink font-display text-xs text-ink">{initials(user?.name)}</div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-900">{user?.name}</p>
-        <p className="truncate text-xs text-slate-500">{user?.email}</p>
+        <p className="truncate text-sm font-semibold text-cream">{user?.name}</p>
+        <p className="truncate text-xs text-cream/50">{user?.email}</p>
       </div>
-      <button onClick={logout} className="btn-ghost p-2" title="Log out" aria-label="Log out">
+      <button onClick={logout} className="grid size-8 place-items-center rounded-lg text-cream/60 transition hover:bg-white/10 hover:text-cream" title="Log out" aria-label="Log out">
         <Icon name="logout" />
       </button>
     </div>
   );
 }
 
+function ShortcutHint() {
+  return (
+    <div className="mb-3 rounded-2xl border border-dashed border-white/15 p-3 text-xs text-cream/60">
+      <p className="mb-1.5 flex items-center gap-1.5 font-semibold text-cream/80"><Icon name="keyboard" className="size-3.5" /> Shortcuts</p>
+      <p><kbd className="rounded bg-white/10 px-1.5 text-cream">N</kbd> new application</p>
+      <p className="mt-1"><kbd className="rounded bg-white/10 px-1.5 text-cream">/</kbd> search</p>
+    </div>
+  );
+}
+
+// Phone: a bottom tab bar with the four main pages + "More" (Due Soon, account)
+function BottomTabs({ onMore }) {
+  const tabs = NAV.filter((n) => n.to !== '/due-soon');
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 lg:hidden" aria-label="Main">
+      <div className="mx-auto grid max-w-md grid-cols-5">
+        {tabs.map((t) => (
+          <NavLink key={t.to} to={t.to} className={({ isActive }) => `flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold ${isActive ? 'text-lime' : 'text-cream/60'}`}>
+            {({ isActive }) => (
+              <>
+                <span className={`grid h-7 w-12 place-items-center rounded-full transition ${isActive ? 'bg-lime text-ink' : ''}`}><Icon name={t.icon} className="size-[18px]" /></span>
+                {t.short}
+              </>
+            )}
+          </NavLink>
+        ))}
+        <button onClick={onMore} className="flex flex-col items-center gap-0.5 py-1.5 text-[11px] font-semibold text-cream/60">
+          <span className="grid h-7 w-12 place-items-center"><Icon name="more" className="size-5" strokeWidth={3} /></span>More
+        </button>
+      </div>
+    </nav>
+  );
+}
+
 export function AppLayout() {
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const totals = useNavCounts();
   const location = useLocation();
-  useEffect(() => setMobileOpen(false), [location.pathname]);
+  useEffect(() => setMoreOpen(false), [location.pathname]);
 
   return (
     <div className="min-h-screen">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-slate-50/80 p-4 lg:flex">
-        <Logo className="px-2 py-1.5" />
-        <div className="mt-8 flex-1"><NavItems totals={totals} /></div>
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-ink p-4 lg:flex">
+        <Logo onDark className="px-2 py-1.5" />
+        <div className="mt-8 flex-1"><SideNav totals={totals} layoutKey="nav-active" /></div>
         <ShortcutHint />
         <UserCard />
       </aside>
 
-      {/* Mobile top bar + drawer */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
-        <Logo />
-        <button className="btn-ghost p-2" onClick={() => setMobileOpen(true)} aria-label="Open menu">
-          <Icon name="menu" className="size-5" />
-        </button>
+      {/* Phone: top bar + bottom tabs + "More" sheet */}
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-ink px-4 py-3 lg:hidden">
+        <Logo onDark />
       </header>
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="animate-fade-in absolute inset-0 bg-slate-900/40" onClick={() => setMobileOpen(false)} />
-          <div className="animate-slide-up absolute inset-y-0 left-0 flex w-72 flex-col bg-white p-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <Logo className="px-2" />
-              <button className="btn-ghost p-2" onClick={() => setMobileOpen(false)} aria-label="Close menu">
-                <Icon name="x" className="size-5" />
-              </button>
-            </div>
-            <div className="mt-8 flex-1"><NavItems totals={totals} onNavigate={() => setMobileOpen(false)} /></div>
-            <UserCard />
+      <BottomTabs onMore={() => setMoreOpen(true)} />
+      <AnimatePresence>
+        {moreOpen && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <motion.div className="absolute inset-0 bg-ink/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoreOpen(false)} />
+            <motion.div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-ink p-4 pb-8" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 380, damping: 36 }}>
+              <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-white/20" />
+              <SideNav totals={totals} layoutKey="nav-active-mobile" onNavigate={() => setMoreOpen(false)} />
+              <div className="mt-4"><UserCard /></div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      <main className="lg:pl-64">
+      <main className="pb-24 lg:pb-0 lg:pl-64">
         {/* Re-keyed on every route change so each page fades/slides in */}
         <motion.div key={location.pathname} className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10"
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}>

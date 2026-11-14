@@ -8,6 +8,50 @@ import { useToast } from '../context/ToastContext';
 import { Icon } from './Icon';
 import { CompanyAvatar } from './ui';
 import { StageSelect } from './StageSelect';
+import { EventFormModal } from './EventForm';
+import { EVENT_STYLES } from '../lib/constants';
+import { addDays, fmtDay, googleCalendarUrl, startOfDay, timeLabel } from '../lib/calendar';
+
+// Every dated round of this application (last 30 days to ~10 weeks ahead)
+function Rounds({ app }) {
+  const [events, setEvents] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [key, setKey] = useState(0);
+  useEffect(() => {
+    const from = addDays(startOfDay(new Date()), -30);
+    api('/events', { query: { from: from.toISOString(), to: addDays(from, 100).toISOString(), application: app._id } })
+      .then((r) => setEvents(r.data)).catch(() => setEvents([]));
+  }, [app._id, key]);
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rounds & deadlines</h3>
+        <button className="btn-ghost px-2 py-1 text-xs" onClick={() => setEditing({ defaults: { application: app._id } })}><Icon name="plus" className="size-3.5" /> Add</button>
+      </div>
+      {events === null ? <div className="h-12 animate-pulse rounded-xl bg-sand" />
+        : events.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">No rounds added yet. Add the OA, GD or interview dates to see them on your calendar.</p>
+        : (
+          <ul className="space-y-2">
+            {events.map((e) => {
+              const st = EVENT_STYLES[e.type] || EVENT_STYLES.Other;
+              const past = new Date(e.end) < new Date();
+              return (
+                <li key={e._id} className={`flex items-center gap-3 rounded-xl border border-[#e8e2cf] p-3 ${e.done || past ? 'opacity-60' : ''}`}>
+                  <span className={`size-2.5 shrink-0 rounded-full ${st.dot}`} />
+                  <button className="min-w-0 flex-1 text-left" onClick={() => setEditing({ event: e })}>
+                    <p className={`truncate text-sm font-semibold text-ink ${e.done ? 'line-through' : ''}`}>{e.title || e.type}</p>
+                    <p className="text-xs text-slate-500">{fmtDay(e.start)} · {timeLabel(e)}{e.location ? ` · ${e.location}` : ''}</p>
+                  </button>
+                  <a href={googleCalendarUrl(e)} target="_blank" rel="noopener noreferrer" className="btn-ghost p-1.5" title="Add to Google Calendar" aria-label="Add to Google Calendar"><Icon name="google" /></a>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      <EventFormModal open={editing !== null} event={editing?.event} defaults={editing?.defaults} onClose={() => setEditing(null)} onSaved={() => setKey((k) => k + 1)} />
+    </section>
+  );
+}
 
 function Fact({ icon, label, children }) {
   return (
@@ -128,6 +172,8 @@ function DrawerPanel({ application, onClose, onEdit, onDelete, onChanged }) {
               ? <p className="whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">{app.notes}</p>
               : <button onClick={() => onEdit(app)} className="w-full rounded-xl border border-dashed border-slate-300 p-4 text-left text-sm text-slate-500 transition hover:border-brand-300 hover:text-brand-700">+ Add notes: interview topics, contacts, follow-ups</button>}
           </section>
+
+          <Rounds app={app} />
 
           <section>
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Timeline</h3>

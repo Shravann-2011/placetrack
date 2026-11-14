@@ -21,3 +21,24 @@ export const SORT_OPTIONS = [
   { value: 'company', label: 'Company A–Z' },
   { value: '-ctc', label: 'Highest CTC' },
 ];
+
+// Must match server/src/constants.js
+export const EVENT_TYPES = [
+  'Registration deadline', 'Pre-placement talk', 'Online assessment', 'Group discussion',
+  'Technical interview', 'HR interview', 'Offer deadline', 'Other',
+];
+export const EVENT_MODES = ['Online', 'On campus', 'Off campus'];
+export const DEADLINE_TYPES = ['Registration deadline', 'Offer deadline'];
+
+// Colours follow the stage colours (OA = sky, GD = violet, Technical = amber, HR = orange, Offer = emerald)
+export const EVENT_STYLES = {
+  'Registration deadline': { chip: 'bg-rose-50 text-rose-800 ring-rose-600/25', dot: 'bg-rose-500', bar: 'bg-rose-500', short: 'Deadline' },
+  'Pre-placement talk': { chip: 'bg-teal-50 text-teal-800 ring-teal-600/25', dot: 'bg-teal-500', bar: 'bg-teal-500', short: 'PPT' },
+  'Online assessment': { chip: 'bg-sky-50 text-sky-800 ring-sky-600/25', dot: 'bg-sky-500', bar: 'bg-sky-500', short: 'OA' },
+  'Group discussion': { chip: 'bg-violet-50 text-violet-800 ring-violet-600/25', dot: 'bg-violet-500', bar: 'bg-violet-500', short: 'GD' },
+  'Technical interview': { chip: 'bg-amber-50 text-amber-900 ring-amber-600/25', dot: 'bg-amber-500', bar: 'bg-amber-500', short: 'Tech' },
+  'HR interview': { chip: 'bg-orange-50 text-orange-800 ring-orange-600/25', dot: 'bg-orange-500', bar: 'bg-orange-500', short: 'HR' },
+  'Offer deadline': { chip: 'bg-emerald-50 text-emerald-800 ring-emerald-600/25', dot: 'bg-emerald-500', bar: 'bg-emerald-500', short: 'Offer' },
+  Other: { chip: 'bg-slate-100 text-slate-700 ring-slate-500/25', dot: 'bg-slate-400', bar: 'bg-slate-400', short: 'Other' },
+  'Application deadline': { chip: 'bg-white text-slate-700 ring-slate-400/40', dot: 'bg-slate-300', bar: 'bg-slate-300', short: 'Due' },
+};

@@ -1,5 +1,13 @@
 // Small inline icon set (stroke icons, 24x24) so we don't need an icon package
 const PATHS = {
+  home: 'M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  download: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3',
+  google: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 8v8M8 12h8',
+  list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  grid: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+  columns: 'M3 4h18v16H3zM9 4v16M15 4v16',
+  checkCircle: 'M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3',
   arrowRight: 'M5 12h14M12 5l7 7-7 7',
   shield: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
   target: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 18a6 6 0 100-12 6 6 0 000 12zM12 14a2 2 0 100-4 2 2 0 000 4z',
@@ -43,15 +51,16 @@ export function Icon({ name, className = 'size-4', strokeWidth = 2 }) {
   );
 }
 
-export function Logo({ className = '' }) {
+// PlaceTrack mark: a rounded square with a "P". `onDark` = lime tile for dark backgrounds.
+export function Logo({ className = '', onDark = false }) {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      <div className="grid size-8 place-items-center rounded-lg bg-brand-600 shadow-sm shadow-brand-600/30">
-        <svg viewBox="0 0 32 32" className="size-5" fill="none" stroke="white" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+      <div className={`grid size-8 place-items-center rounded-lg ${onDark ? 'bg-lime' : 'bg-ink'}`}>
+        <svg viewBox="0 0 32 32" className="size-5" fill="none" stroke={onDark ? '#10231a' : '#d4f04c'} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10 23V9h7a4.5 4.5 0 010 9h-7" />
         </svg>
       </div>
-      <span className="text-lg font-bold tracking-tight">PlaceTrack</span>
+      <span className={`font-display text-lg uppercase tracking-tight ${onDark ? 'text-cream' : 'text-ink'}`}>PlaceTrack</span>
     </div>
   );
 }

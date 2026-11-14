@@ -1,140 +1,68 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
-import { CountUp } from '../components/CountUp';
 import { Icon, Logo } from '../components/Icon';
-import { STAGES, STAGE_STYLES } from '../lib/constants';
-
-const FEATURES = [
-  { icon: 'layers', title: 'Every placement round', text: 'Applied, Aptitude/OA, GD, Technical, HR, Offer — the stages Indian campus drives actually use.' },
-  { icon: 'clock', title: 'Never miss a deadline', text: 'Due Soon groups upcoming OAs, interviews and form deadlines so today’s round is always on top.' },
-  { icon: 'chart', title: 'See what’s working', text: 'A stage funnel, weekly activity and response rate by source show where your effort pays off.' },
-  { icon: 'search', title: 'Find anything instantly', text: 'Search by company or role and filter by stage, source or job type — even with 100+ applications.' },
-  { icon: 'rupee', title: 'Compare offers', text: 'Log CTC in LPA or stipend per month and sort to see your strongest options at a glance.' },
-  { icon: 'shield', title: 'Private by design', text: 'Your data is scoped to your account, passwords are hashed, and sessions use secure httpOnly cookies.' },
-];
-
-const STEPS = [
-  { title: 'Add an application', text: 'Company, role, CTC, source and the next deadline — it takes ten seconds.' },
-  { title: 'Move it through rounds', text: 'Update the stage as you clear each round. PlaceTrack records the full timeline.' },
-  { title: 'Learn from your data', text: 'Your dashboard shows conversion at every stage and which channels reply most.' },
-];
+import { JaggedEdge, Spark, Squiggle } from '../components/Doodles';
 
 const EASE = [0.16, 1, 0.3, 1];
 
-// Fades + slides its children up the first time they scroll into view
-function Reveal({ children, delay = 0, className = '', y = 24 }) {
+function Reveal({ children, delay = 0, className = '', y = 28 }) {
   return (
     <motion.div className={className} initial={{ opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }} transition={{ duration: 0.6, delay, ease: EASE }}>
+      viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.7, delay, ease: EASE }}>
       {children}
     </motion.div>
   );
 }
 
-// The placement pipeline with a highlight that walks through each stage on a loop
-function AnimatedPipeline() {
-  const stages = STAGES.filter((s) => s !== 'Rejected');
-  const [active, setActive] = useState(0);
-  useEffect(() => {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    const id = setInterval(() => setActive((a) => (a + 1) % stages.length), 1100);
-    return () => clearInterval(id);
-  }, [stages.length]);
-  return (
-    <div className="mx-auto mt-12 flex max-w-3xl flex-wrap items-center justify-center gap-x-2 gap-y-3">
-      {stages.map((s, i, arr) => (
-        <div key={s} className="flex items-center gap-2">
-          <motion.span animate={i === active ? { scale: 1.08, y: -2 } : { scale: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition-shadow ${STAGE_STYLES[s].badge} ${
-              i === active ? 'shadow-md shadow-brand-500/20' : ''}`}>
-            <span className={`size-1.5 rounded-full ${STAGE_STYLES[s].dot}`} />{s}
-          </motion.span>
-          {i < arr.length - 1 && (
-            <Icon name="chevronRight" className={`size-3.5 transition-colors duration-300 ${i < active ? 'text-brand-400' : 'text-slate-300'}`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
+// The problems students actually face, each answered by a feature
+const PROBLEMS = [
+  { problem: 'Deadlines everywhere', fix: 'Email, WhatsApp groups, the placement portal. PlaceTrack puts every OA, GD, interview and deadline on one calendar.', bg: 'bg-lime', tilt: -2 },
+  { problem: 'Two rounds, one slot', fix: 'Two OAs at 10 am? Clashes are flagged the moment you add an event, so you can ask for a reschedule in time.', bg: 'bg-pink', tilt: 1.5 },
+  { problem: '“Wait, which round was that?”', fix: 'Every application keeps its own rounds and a dated timeline from Applied to Offer.', bg: 'bg-cream', tilt: -1 },
+  { problem: 'No reminders', fix: 'One click adds a round to Google Calendar, or export them all with a reminder an hour before each.', bg: 'bg-coral', tilt: 2 },
+  { problem: 'Lost in 40 applications', fix: 'Search, filters, a Kanban board and a Due Soon list keep the busiest week under control.', bg: 'bg-cream', tilt: -1.5 },
+  { problem: 'Not sure what works', fix: 'Your funnel and reply rate by source show where your effort pays off: campus, referral or LinkedIn.', bg: 'bg-lime', tilt: 1 },
+];
 
-// A lightweight, illustrative product preview drawn in HTML (not a screenshot)
-function ProductPreview() {
-  const funnel = [['Applied', 100], ['Aptitude/OA', 74], ['GD', 46], ['Technical', 41], ['HR', 20], ['Offer', 10]];
-  const rows = [
-    ['Zoho', 'Member Technical Staff', 'Technical', 'in 2 days'],
-    ['TCS', 'Digital Engineer', 'Aptitude/OA', 'Tomorrow'],
-    ['Razorpay', 'SDE Intern', 'HR', 'in 5 days'],
-  ];
-  // Mouse position → gentle 3D tilt (springs keep it smooth)
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [6, -6]), { stiffness: 150, damping: 20 });
-  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-8, 8]), { stiffness: 150, damping: 20 });
-  const onMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    mx.set((e.clientX - r.left) / r.width - 0.5);
-    my.set((e.clientY - r.top) / r.height - 0.5);
-  };
-  const reset = () => { mx.set(0); my.set(0); };
+const MINI_DAYS = Array.from({ length: 35 }, (_, i) => i - 2); // a sample month grid
+const MINI_EVENTS = { 4: 'sky', 6: 'amber', 11: 'violet', 12: 'violet', 15: 'rose', 19: 'orange', 24: 'emerald' };
+const DOT = { sky: 'bg-sky-500', amber: 'bg-amber-500', violet: 'bg-violet-500', rose: 'bg-rose-500', orange: 'bg-orange-500', emerald: 'bg-emerald-500' };
 
+// Illustrative calendar card (sample data, not a screenshot)
+function CalendarPreview() {
+  const mx = useMotionValue(0), my = useMotionValue(0);
+  const rotateX = useSpring(useTransform(my, [-0.5, 0.5], [7, -7]), { stiffness: 150, damping: 18 });
+  const rotateY = useSpring(useTransform(mx, [-0.5, 0.5], [-9, 9]), { stiffness: 150, damping: 18 });
   return (
-    <div className="relative mx-auto w-full max-w-5xl text-left [perspective:1400px]" onMouseMove={onMove} onMouseLeave={reset}>
-      <div className="absolute -inset-x-8 -top-8 -bottom-4 -z-10 rounded-[2rem] bg-gradient-to-b from-brand-500/20 via-violet-400/10 to-transparent blur-2xl" />
-      <motion.div style={{ rotateX, rotateY, transformStyle: 'preserve-3d' }}
-        initial={{ opacity: 0, y: 40, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.45, duration: 0.8, ease: EASE }}
-        className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-brand-900/10 ring-1 ring-slate-900/5">
-        <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2.5">
-          <span className="size-2.5 rounded-full bg-rose-300" /><span className="size-2.5 rounded-full bg-amber-300" /><span className="size-2.5 rounded-full bg-emerald-300" />
-          <span className="ml-3 hidden rounded-md bg-white px-3 py-0.5 text-[11px] text-slate-400 ring-1 ring-slate-200 sm:block">placetrack.app/dashboard</span>
+    <div className="[perspective:1200px]" onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); mx.set((e.clientX - r.left) / r.width - 0.5); my.set((e.clientY - r.top) / r.height - 0.5); }}
+      onMouseLeave={() => { mx.set(0); my.set(0); }}>
+      <motion.div style={{ rotateX, rotateY }} initial={{ opacity: 0, y: 40, rotate: 4 }} animate={{ opacity: 1, y: 0, rotate: 3 }} transition={{ delay: 0.5, duration: 0.9, ease: EASE }}
+        className="relative w-full max-w-md rounded-[28px] bg-cream p-5 text-left text-ink shadow-[10px_10px_0_0_var(--color-lime)]">
+        <div className="flex items-center justify-between">
+          <p className="display text-2xl">November</p>
+          <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-lime">7 rounds</span>
         </div>
-        <div className="grid gap-4 p-4 sm:p-6 md:grid-cols-[1.1fr_1fr]">
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              {[['Applications', '27'], ['In progress', '14'], ['Response rate', '63%']].map(([l, v]) => (
-                <div key={l} className="rounded-xl border border-slate-200 p-3">
-                  <p className="text-[11px] text-slate-500">{l}</p>
-                  <p className="mt-1 text-xl font-semibold text-slate-900">
-                    <CountUp value={parseInt(v, 10)} suffix={v.endsWith('%') ? '%' : ''} duration={1.4} />
-                  </p>
-                </div>
-              ))}
+        <div className="mt-4 grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-ink/50">
+          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <span key={i}>{d}</span>)}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {MINI_DAYS.map((d) => (
+            <div key={d} className={`flex aspect-square flex-col items-center justify-center rounded-lg text-xs font-bold ${d === 11 ? 'bg-lime' : d > 0 && d <= 30 ? 'bg-white' : 'bg-transparent text-ink/20'}`}>
+              {d > 0 && d <= 30 ? d : ''}
+              {MINI_EVENTS[d] && <span className={`mt-0.5 size-1.5 rounded-full ${DOT[MINI_EVENTS[d]]}`} />}
             </div>
-            <div className="rounded-xl border border-slate-200 p-4">
-              <p className="mb-3 text-xs font-semibold text-slate-900">Placement funnel</p>
-              <div className="space-y-2">
-                {funnel.map(([s, w], i) => (
-                  <div key={s} className="flex items-center gap-2">
-                    <span className="w-20 truncate text-[11px] text-slate-500">{s}</span>
-                    <motion.div className="h-3 origin-left rounded-r bg-brand-600" style={{ width: `${w * 0.7}%` }}
-                      initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.9 + i * 0.09, duration: 0.7, ease: EASE }} />
-                  </div>
-                ))}
-              </div>
-            </div>
+          ))}
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center gap-3 rounded-xl bg-white p-2.5">
+            <span className="h-8 w-1 rounded-full bg-violet-500" />
+            <div className="flex-1"><p className="text-sm font-bold">Zoho · Group discussion</p><p className="text-xs text-ink/60">Wed 11 · 2:00 – 3:00 pm · Seminar Hall 2</p></div>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900">Clash</span>
           </div>
-          <div className="rounded-xl border border-slate-200 p-4">
-            <p className="mb-3 text-xs font-semibold text-slate-900">Up next</p>
-            <ul className="divide-y divide-slate-100">
-              {rows.map(([c, r, st, d], i) => (
-                <motion.li key={c} className="flex items-center gap-3 py-2.5"
-                  initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1 + i * 0.12, duration: 0.5, ease: EASE }}>
-                  <div className="grid size-8 place-items-center rounded-lg bg-brand-50 text-[11px] font-bold text-brand-700">{c[0]}</div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-slate-900">{c}</p>
-                    <p className="truncate text-[11px] text-slate-500">{r}</p>
-                  </div>
-                  <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset lg:inline ${STAGE_STYLES[st].badge}`}>{st}</span>
-                  <span className={`text-[11px] ${d === 'Tomorrow' ? 'font-semibold text-rose-600' : 'text-slate-600'}`}>{d}</span>
-                </motion.li>
-              ))}
-            </ul>
-            <div className="mt-3 rounded-lg bg-brand-50 p-3 text-[11px] text-brand-800">
-              <span className="font-semibold">Referral</span> applications reply 2× more often than job portals.
-            </div>
+          <div className="flex items-center gap-3 rounded-xl bg-white p-2.5">
+            <span className="h-8 w-1 rounded-full bg-sky-500" />
+            <div className="flex-1"><p className="text-sm font-bold">TCS · Online assessment</p><p className="text-xs text-ink/60">Tue 4 · 10:00 am – 12:00 pm · TCS iON</p></div>
+            <Icon name="google" className="size-4 text-ink/40" />
           </div>
         </div>
       </motion.div>
@@ -144,129 +72,127 @@ function ProductPreview() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <Logo />
-          <nav className="flex items-center gap-2">
-            <a href="#features" className="btn-ghost hidden sm:inline-flex">Features</a>
-            <a href="#how" className="btn-ghost hidden sm:inline-flex">How it works</a>
-            <Link to="/login" className="btn-ghost">Log in</Link>
-            <Link to="/register" className="btn-primary">Get started</Link>
-          </nav>
-        </div>
-      </header>
-
+    <div className="min-h-screen overflow-x-hidden bg-cream text-ink">
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,var(--color-brand-100),transparent_60%)]" />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:48px_48px] opacity-40 [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
-        <div className="mx-auto max-w-6xl px-4 pt-16 pb-20 text-center sm:px-6 sm:pt-24">
-          <motion.span initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}
-            className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/80 px-3 py-1 text-xs font-medium text-brand-700 shadow-xs">
-            <motion.span animate={{ rotate: [0, 15, -10, 0] }} transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 2.5 }} className="inline-flex">
-              <Icon name="sparkles" className="size-3.5" />
-            </motion.span>
-            Built for Indian campus placements
-          </motion.span>
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08, duration: 0.7, ease: EASE }}
-            className="mx-auto mt-6 max-w-3xl text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl">
-            Your placement season,{' '}
-            <span className="animate-gradient bg-gradient-to-r from-brand-600 via-violet-500 to-brand-600 bg-[length:200%_auto] bg-clip-text text-transparent">finally organised.</span>
-          </motion.h1>
-          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.7, ease: EASE }}
-            className="mx-auto mt-6 max-w-2xl text-lg text-slate-600">
-            Track every application from the aptitude test to the offer letter. See your deadlines, your funnel and what’s actually working — in one place.
-          </motion.p>
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.7, ease: EASE }}
-            className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <Link to="/register" className="btn-primary group px-5 py-3 text-base shadow-lg shadow-brand-600/25">
-                Start tracking — it’s free <Icon name="arrowRight" className="size-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <Link to="/login" className="btn-secondary px-5 py-3 text-base">Log in</Link>
-            </motion.div>
-          </motion.div>
+      <section className="relative overflow-hidden bg-ink text-cream">
+        <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-8">
+          <Link to="/" className="shrink-0 rounded-full bg-cream px-3 py-2 sm:px-4"><Logo /></Link>
+          <nav className="flex items-center gap-2">
+            <a href="#problems" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-cream/80 transition hover:text-lime sm:inline">Why PlaceTrack</a>
+            <a href="#calendar" className="hidden rounded-full px-4 py-2 text-sm font-semibold text-cream/80 transition hover:text-lime sm:inline">Calendar</a>
+            <Link to="/login" className="whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold text-cream transition hover:text-lime sm:px-4">Log in</Link>
+            <Link to="/register" className="whitespace-nowrap rounded-full bg-lime px-4 py-2.5 text-sm font-bold text-ink transition hover:scale-105 sm:px-5">Start free</Link>
+          </nav>
+        </header>
 
-          {/* Stage strip: a highlight walks through the rounds */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-            <AnimatedPipeline />
-          </motion.div>
+        <Squiggle className="absolute bottom-[8%] left-[3%] hidden w-24 -rotate-6 text-lime md:block" />
+        <Spark className="absolute right-[8%] top-[18%] w-12 text-pink" />
+        <Spark className="absolute bottom-[14%] left-[46%] hidden w-9 text-lime lg:block" />
 
-          <div className="mt-16"><ProductPreview /></div>
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 pb-24 pt-10 sm:px-8 lg:grid-cols-[1.15fr_1fr] lg:pb-32 lg:pt-16">
+          <div>
+            <motion.p initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+              className="inline-block -rotate-2 bg-pink px-3 py-1 font-display text-sm uppercase tracking-wide text-ink">For Indian campus placements</motion.p>
+            <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08, duration: 0.8, ease: EASE }}
+              className="display mt-6 text-[clamp(2.75rem,6.4vw,6.25rem)]">
+              Every round.<br />Every deadline.<br /><span className="text-lime">One place.</span>
+            </motion.h1>
+            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.7, ease: EASE }}
+              className="mt-7 max-w-lg text-lg text-cream/80">
+              Track every application from registration to offer letter, see every OA and interview on one calendar, and never get caught out by a clash again.
+            </motion.p>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7, ease: EASE }}
+              className="mt-9 flex flex-wrap items-center gap-5">
+              <Link to="/register" className="sticker -rotate-2 text-base">Start tracking <Icon name="arrowRight" /></Link>
+              <Link to="/login" className="font-semibold text-cream underline decoration-lime decoration-2 underline-offset-8 transition hover:text-lime">I already have an account</Link>
+            </motion.div>
+          </div>
+          <div className="flex justify-center lg:justify-end"><CalendarPreview /></div>
         </div>
       </section>
 
-      {/* Features */}
-      <section id="features" className="scroll-mt-20 border-t border-slate-100 bg-slate-50/60 py-20 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold text-brand-600">Features</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Everything a spreadsheet can’t do</h2>
-            <p className="mt-4 text-slate-600">Spreadsheets get messy by the third company. PlaceTrack is built around how placements actually work.</p>
+      {/* Problems -> fixes */}
+      <section id="problems" className="scroll-mt-6 px-4 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl">
+          <Reveal className="max-w-3xl">
+            <h2 className="display text-[clamp(2.4rem,6vw,4.75rem)]">Placement season<br />is <span className="relative inline-block">chaos.<Squiggle stretch className="absolute -bottom-2 left-0 h-3 w-full text-coral sm:h-4" /></span></h2>
+            <p className="mt-6 max-w-xl text-lg text-ink/70">Six problems every student runs into, and how PlaceTrack fixes each one.</p>
           </Reveal>
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f, i) => (
-              <motion.div key={f.title} className="card group p-6 transition-shadow hover:shadow-lg hover:shadow-brand-900/5"
-                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}
-                transition={{ delay: (i % 3) * 0.08, duration: 0.55, ease: EASE }} whileHover={{ y: -4 }}>
-                <div className="grid size-10 place-items-center rounded-lg bg-brand-600 text-white shadow-sm shadow-brand-600/30 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110">
-                  <Icon name={f.icon} className="size-5" />
-                </div>
-                <h3 className="mt-5 font-semibold text-slate-900">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.text}</p>
-              </motion.div>
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {PROBLEMS.map((p, i) => (
+              <motion.article key={p.problem} initial={{ opacity: 0, y: 40, rotate: 0 }} whileInView={{ opacity: 1, y: 0, rotate: p.tilt }}
+                viewport={{ once: true, amount: 0.3 }} transition={{ delay: (i % 3) * 0.08, duration: 0.6, ease: EASE }}
+                whileHover={{ rotate: 0, y: -6, transition: { duration: 0.2 } }}
+                className={`rounded-[26px] ${p.bg} p-7 ring-2 ring-ink shadow-[6px_6px_0_0_var(--color-ink)]`}>
+                <p className="font-display text-sm uppercase text-ink/50">Problem {i + 1}</p>
+                <h3 className="display mt-2 text-2xl">{p.problem}</h3>
+                <p className="mt-4 text-[15px] leading-relaxed text-ink/80">{p.fix}</p>
+              </motion.article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how" className="scroll-mt-20 py-20 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <Reveal className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold text-brand-600">How it works</p>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Three steps. Zero chaos.</h2>
+      {/* Statement band */}
+      <section className="relative overflow-hidden bg-lime px-4 py-20 sm:px-8">
+        <Spark className="absolute right-[6%] top-8 w-14 text-ink" />
+        <Reveal className="mx-auto max-w-7xl text-center">
+          <h2 className="display text-[clamp(2.6rem,9vw,8rem)]">Never miss<br />an OA again.</h2>
+          <Link to="/register" className="sticker mt-10 rotate-2 bg-cream text-base">Make my calendar <Icon name="arrowRight" /></Link>
+        </Reveal>
+      </section>
+
+      {/* Calendar spotlight */}
+      <section id="calendar" className="scroll-mt-6 bg-ink px-4 py-20 text-cream sm:px-8 sm:py-28">
+        <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2">
+          <Reveal>
+            <h2 className="display text-[clamp(2.4rem,5.5vw,4.5rem)] text-lime">One calendar<br />for the whole drive.</h2>
+            <ul className="mt-8 space-y-4 text-lg text-cream/85">
+              {[
+                ['calendar', 'Month, week and agenda views of every OA, GD, interview and deadline.'],
+                ['alert', 'Clash warnings the moment two rounds overlap.'],
+                ['google', 'Add any round to Google Calendar in one click.'],
+                ['download', 'Export everything with a reminder an hour before each round.'],
+              ].map(([icon, text]) => (
+                <li key={text} className="flex gap-4"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-lime text-ink"><Icon name={icon} className="size-5" /></span><span className="pt-1.5">{text}</span></li>
+              ))}
+            </ul>
           </Reveal>
-          <ol className="mt-14 grid gap-8 md:grid-cols-3">
-            {STEPS.map((s, i) => (
-              <motion.li key={s.title} className="relative"
-                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }}
-                transition={{ delay: i * 0.15, duration: 0.55, ease: EASE }}>
-                {i < STEPS.length - 1 && <div className="absolute left-12 top-5 hidden h-px w-[calc(100%-2rem)] bg-gradient-to-r from-brand-200 to-transparent md:block" />}
-                <div className="relative grid size-10 place-items-center rounded-full bg-brand-50 text-sm font-bold text-brand-700 ring-4 ring-white">{i + 1}</div>
-                <h3 className="mt-5 font-semibold text-slate-900">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.text}</p>
-              </motion.li>
-            ))}
-          </ol>
+          <Reveal delay={0.1} className="flex justify-center"><CalendarPreview /></Reveal>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="px-4 pb-20 sm:px-6">
-        <motion.div initial={{ opacity: 0, y: 30, scale: 0.98 }} whileInView={{ opacity: 1, y: 0, scale: 1 }} viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.7, ease: EASE }}
-          className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-violet-600 px-6 py-14 text-center text-white sm:px-12">
-          <motion.div className="absolute -right-20 -top-20 size-72 rounded-full bg-white/10 blur-3xl"
-            animate={{ x: [0, -40, 0], y: [0, 30, 0] }} transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }} />
-          <motion.div className="absolute -bottom-24 -left-10 size-72 rounded-full bg-violet-300/20 blur-3xl"
-            animate={{ x: [0, 50, 0], y: [0, -20, 0] }} transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }} />
-          <h2 className="relative text-3xl font-bold tracking-tight sm:text-4xl">Your next offer starts with your next application.</h2>
-          <p className="relative mx-auto mt-4 max-w-xl text-brand-100">Set up in under a minute. No spreadsheets, no lost deadlines.</p>
-          <Link to="/register" className="btn relative mt-8 bg-white px-5 py-3 text-base text-brand-700 shadow-lg hover:bg-brand-50">
-            Create your free account <Icon name="arrowRight" />
-          </Link>
-        </motion.div>
+      {/* How it works */}
+      <section className="px-4 py-20 sm:px-8 sm:py-28">
+        <div className="mx-auto max-w-7xl">
+          <Reveal><h2 className="display text-[clamp(2.4rem,6vw,4.75rem)]">Three steps.<br /><span className="text-coral">Zero chaos.</span></h2></Reveal>
+          <ol className="mt-14 grid gap-10 md:grid-cols-3">
+            {[
+              ['Add the company', 'Role, CTC, source and the next deadline. Ten seconds.'],
+              ['Drop in the rounds', 'OA, GD, interviews. They land on your calendar, clashes flagged.'],
+              ['Move it to offer', 'Drag it across the board as you clear each round. Celebrate.'],
+            ].map(([t, d], i) => (
+              <Reveal key={t} delay={i * 0.12}>
+                <li className="list-none">
+                  <span className="display text-8xl text-lime [-webkit-text-stroke:2px_var(--color-ink)]">{i + 1}</span>
+                  <h3 className="display mt-3 text-2xl">{t}</h3>
+                  <p className="mt-2 text-ink/70">{d}</p>
+                </li>
+              </Reveal>
+            ))}
+          </ol>
+          <Reveal className="mt-16 text-center"><Link to="/register" className="sticker -rotate-1 text-base">Create your free account <Icon name="arrowRight" /></Link></Reveal>
+        </div>
       </section>
 
-      <footer className="border-t border-slate-100">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:px-6">
-          <Logo className="scale-90" />
-          <p>© {new Date().getFullYear()} PlaceTrack · Built for campus placements</p>
+      {/* Footer with a jagged edge */}
+      <footer className="relative">
+        <JaggedEdge className="block h-20 w-full text-lime sm:h-28" />
+        <div className="bg-lime px-4 pb-10 sm:px-8">
+          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
+            <Logo />
+            <p className="text-sm font-semibold text-ink/70">© {new Date().getFullYear()} PlaceTrack · Built for campus placements</p>
+          </div>
         </div>
       </footer>
     </div>

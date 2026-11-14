@@ -6,4 +6,11 @@ const SOURCES = ['Campus', 'Referral', 'LinkedIn', 'Company Website', 'Job Porta
 
 const JOB_TYPES = ['Internship', 'Full-time', 'Internship + Full-time'];
 
-module.exports = { STAGES, SOURCES, JOB_TYPES };
+// Calendar event types: the dated steps of a campus placement drive
+const EVENT_TYPES = [
+  'Registration deadline', 'Pre-placement talk', 'Online assessment', 'Group discussion',
+  'Technical interview', 'HR interview', 'Offer deadline', 'Other',
+];
+const EVENT_MODES = ['Online', 'On campus', 'Off campus'];
+
+module.exports = { STAGES, SOURCES, JOB_TYPES, EVENT_TYPES, EVENT_MODES };

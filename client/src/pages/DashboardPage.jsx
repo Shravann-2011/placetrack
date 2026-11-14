@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { describeDue } from '../lib/format';
+import { fmtDay, sameDay, timeLabel } from '../lib/calendar';
+import { EVENT_STYLES } from '../lib/constants';
 import { Icon } from '../components/Icon';
 import { CompanyAvatar, ConfirmDialog, EmptyState, StageBadge } from '../components/ui';
 import { useToast } from '../context/ToastContext';
@@ -55,9 +56,9 @@ export default function DashboardPage() {
     let ignore = false;
     Promise.all([
       api('/applications/stats'),
-      api('/applications', { query: { dueWithinDays: 7, limit: 4 } }),
+      api('/events', { query: { from: new Date().toISOString(), to: new Date(Date.now() + 7 * 864e5).toISOString() } }),
     ])
-      .then(([s, u]) => { if (!ignore) { setStats(s.data); setUpcoming(u.data); } })
+      .then(([s, u]) => { if (!ignore) { setStats(s.data); setUpcoming(u.data.filter((e) => !e.done).slice(0, 5)); } })
       .catch((err) => !ignore && setError(err.message));
     return () => { ignore = true; };
   }, [reloadKey]);
@@ -66,8 +67,8 @@ export default function DashboardPage() {
   const header = (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{greeting()}, {firstName} 👋</h1>
-        <p className="mt-1 text-sm text-slate-500">Here’s how your placement season is going.</p>
+        <h1 className="display text-4xl text-ink sm:text-5xl">{greeting()}, {firstName} 👋</h1>
+        <p className="mt-2 text-sm text-slate-600">Here’s how your placement season is going.</p>
       </div>
       <button className="btn-primary" onClick={() => setAdding(true)}><Icon name="plus" /> Add application</button>
     </div>
@@ -131,25 +132,29 @@ export default function DashboardPage() {
           <SourceChart data={stats.bySource} />
         </ChartCard>
 
-        <ChartCard title="Up next" subtitle="Deadlines in the next 7 days"
-          action={<Link to="/due-soon" className="text-sm font-semibold text-brand-600 hover:text-brand-700">View all</Link>}>
+        <ChartCard title="Up next" subtitle="Rounds and deadlines in the next 7 days"
+          action={<Link to="/calendar" className="text-sm font-semibold text-brand-600 hover:text-ink">Open calendar</Link>}>
           {upcoming.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">Nothing due this week. 🎉</p>
+            <div className="py-8 text-center text-sm text-slate-500">
+              <p>Nothing scheduled this week.</p>
+              <Link to="/calendar" className="mt-2 inline-block font-semibold text-ink underline decoration-lime decoration-2 underline-offset-4">Add your OA and interview dates</Link>
+            </div>
           ) : (
-            <ul className="-my-2 divide-y divide-slate-100">
-              {upcoming.map((a) => {
-                const due = describeDue(a.dueDate);
+            <ul className="-my-1 space-y-2">
+              {upcoming.map((e) => {
+                const st = EVENT_STYLES[e.type] || EVENT_STYLES.Other;
+                const today = sameDay(e.start, new Date());
                 return (
-                  <li key={a._id}>
-                    <button onClick={() => setViewing(a)} className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3 text-left transition hover:bg-slate-50">
-                    <CompanyAvatar name={a.company} size="size-8" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">{a.company}</p>
-                      <p className="truncate text-xs text-slate-500">{a.role}</p>
+                  <li key={e._id} className="flex items-center gap-3 rounded-xl border border-[#efe9d8] p-2.5">
+                    <div className={`grid size-11 shrink-0 place-items-center rounded-xl text-center leading-none ${today ? 'bg-lime text-ink' : 'bg-sand text-ink'}`}>
+                      <span className="text-[10px] font-bold uppercase">{today ? 'Today' : fmtDay(e.start, { weekday: 'short' })}</span>
+                      <span className="display text-base">{new Date(e.start).getDate()}</span>
                     </div>
-                    <StageBadge stage={a.stage} className="hidden sm:inline-flex" />
-                    <span className={`w-20 text-right text-sm ${due.urgency === 'urgent' ? 'font-semibold text-rose-600' : 'text-slate-600'}`}>{due.text}</span>
-                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink">{e.application?.company}</p>
+                      <p className="truncate text-xs text-slate-500">{e.type} · {timeLabel(e)}</p>
+                    </div>
+                    <span className={`hidden size-2.5 shrink-0 rounded-full sm:block ${st.dot}`} />
                   </li>
                 );
               })}

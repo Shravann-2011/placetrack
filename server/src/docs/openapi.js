@@ -1,6 +1,6 @@
 // OpenAPI 3 description of the PlaceTrack API, served at /api/docs (Swagger UI).
 // Written as a plain object, so there are no comment annotations to keep in sync.
-const { STAGES, SOURCES, JOB_TYPES } = require('../constants');
+const { STAGES, SOURCES, JOB_TYPES, EVENT_TYPES, EVENT_MODES } = require('../constants');
 
 const error = (example) => ({
   description: example,
@@ -28,6 +28,7 @@ module.exports = {
   tags: [
     { name: 'Auth', description: 'Register, log in, refresh and log out' },
     { name: 'Applications', description: 'Job/internship applications (always scoped to the logged-in user)' },
+    { name: 'Events', description: 'Calendar: dated rounds and deadlines of an application' },
     { name: 'System' },
   ],
   components: {
@@ -92,6 +93,21 @@ module.exports = {
             },
           },
         ],
+      },
+      EventInput: {
+        type: 'object', required: ['application', 'type', 'start'],
+        properties: {
+          application: { type: 'string', description: 'Application id (must be yours)' },
+          type: { type: 'string', enum: EVENT_TYPES },
+          title: { type: 'string' },
+          start: { type: 'string', format: 'date-time', example: '2026-11-20T04:30:00Z' },
+          end: { type: 'string', format: 'date-time', description: 'Omit for a deadline (end = start)' },
+          allDay: { type: 'boolean' },
+          mode: { type: 'string', enum: EVENT_MODES },
+          location: { type: 'string', example: 'Seminar Hall 2' },
+          notes: { type: 'string' },
+          done: { type: 'boolean' },
+        },
       },
       Stats: {
         type: 'object',
@@ -213,6 +229,31 @@ module.exports = {
         requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['stage'], properties: { stage: { type: 'string', enum: STAGES } } } } } },
         responses: { 200: json({ type: 'object', properties: { data: { $ref: '#/components/schemas/Application' } } }), 400: validation, 404: error('Application not found') },
       },
+    },
+    '/events': {
+      get: {
+        tags: ['Events'], summary: 'Events in a date range (max 100 days)', security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'from', in: 'query', required: true, schema: { type: 'string', format: 'date-time' } },
+          { name: 'to', in: 'query', required: true, schema: { type: 'string', format: 'date-time' } },
+          { name: 'application', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'OK' }, 400: validation, 401: error('Not logged in') },
+      },
+      post: {
+        tags: ['Events'], summary: 'Add an event; the reply lists any clashes', security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/EventInput' } } } },
+        responses: { 201: { description: 'Created: { data, clashes }' }, 400: validation, 404: error('Application not found') },
+      },
+    },
+    '/events/{id}': {
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+      patch: {
+        tags: ['Events'], summary: 'Update an event (e.g. mark done); the reply lists any clashes', security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/EventInput' } } } },
+        responses: { 200: { description: 'OK: { data, clashes }' }, 400: validation, 404: error('Event not found') },
+      },
+      delete: { tags: ['Events'], summary: 'Delete an event', security: [{ bearerAuth: [] }], responses: { 204: { description: 'Deleted' }, 404: error('Event not found') } },
     },
   },
 };

@@ -164,8 +164,8 @@ export default function ApplicationsPage() {
     <div className="animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Applications</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="display text-4xl text-ink sm:text-5xl">Applications</h1>
+          <p className="mt-2 text-sm text-slate-600">
             {total === undefined ? 'Loading…' : filtersActive ? `${total} matching application${total === 1 ? '' : 's'}` : `${total} application${total === 1 ? '' : 's'} tracked`}
           </p>
         </div>

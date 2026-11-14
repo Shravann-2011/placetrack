@@ -1,4 +1,5 @@
 const Application = require('../models/Application');
+const Event = require('../models/Event');
 const AppError = require('../utils/AppError');
 
 // Escape regex special characters so a search like "C++" doesn't break the query
@@ -79,6 +80,7 @@ async function updateStage(req, res) {
 // DELETE /api/applications/:id
 async function deleteApplication(req, res) {
   const app = await findOwned(req);
+  await Event.deleteMany({ application: app._id, user: req.user._id }); // its calendar events go too
   await app.deleteOne();
   res.status(204).end();
 }

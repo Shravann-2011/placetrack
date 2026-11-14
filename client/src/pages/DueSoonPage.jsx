@@ -56,8 +56,8 @@ export default function DueSoonPage() {
     <div className="animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Due Soon</h1>
-          <p className="mt-1 text-sm text-slate-500">Upcoming OAs, interviews and deadlines for active applications.</p>
+          <h1 className="display text-4xl text-ink sm:text-5xl">Due Soon</h1>
+          <p className="mt-2 text-sm text-slate-600">Upcoming OAs, interviews and deadlines for active applications.</p>
         </div>
         <div className="inline-flex rounded-lg bg-slate-200/70 p-1" role="tablist" aria-label="Time range">
           {RANGES.map((r) => (
