@@ -42,3 +42,15 @@ export const EVENT_STYLES = {
   Other: { chip: 'bg-slate-100 text-slate-700 ring-slate-500/25', dot: 'bg-slate-400', bar: 'bg-slate-400', short: 'Other' },
   'Application deadline': { chip: 'bg-white text-slate-700 ring-slate-400/40', dot: 'bg-slate-300', bar: 'bg-slate-300', short: 'Due' },
 };
+
+// One-tap checklist suggestions for each kind of round
+export const PREP_TEMPLATES = {
+  'Online assessment': ['Test laptop, webcam and internet', 'Practise 2 timed aptitude sets', 'Revise arrays, strings and DP', 'Keep ID and admit card ready'],
+  'Group discussion': ["Read today's top 3 news stories", 'Prepare 2 points on a tech trend', 'Practise speaking for 2 minutes'],
+  'Technical interview': ['Revise DBMS, OS and CN basics', 'Re-read my resume projects', 'Solve 3 medium DSA problems', 'Prepare questions for the interviewer'],
+  'HR interview': ['Prepare "Tell me about yourself"', 'Research the company and its products', 'Know my strengths and goals', 'Carry 3 resume copies and ID'],
+  'Pre-placement talk': ['Note CTC, bond and locations', 'Prepare one question to ask'],
+  'Registration deadline': ['Update resume PDF', 'Check the eligibility criteria', 'Submit and save the confirmation'],
+  'Offer deadline': ['Compare with my other offers', 'Read the bond and joining terms', 'Talk to a senior at the company'],
+  Other: [],
+};

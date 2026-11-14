@@ -35,6 +35,46 @@ function StatTile({ label, value, suffix = '', sub, icon, to, index = 0 }) {
     : <motion.div {...motionProps} className="card p-5">{body}</motion.div>;
 }
 
+// Applications with no stage change or follow-up for 14+ days (and no round booked)
+function NudgeCard({ items, onDone }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(null);
+  const act = async (a, kind) => {
+    setBusy(a._id);
+    try {
+      if (kind === 'followed') await api(`/applications/${a._id}`, { method: 'PATCH', body: { followedUpAt: new Date().toISOString() } });
+      else await api(`/applications/${a._id}/stage`, { method: 'PATCH', body: { stage: 'Rejected' } });
+      toast(kind === 'followed' ? `Noted. We'll check on ${a.company} again in 14 days` : `${a.company} marked as rejected`);
+      onDone(a._id);
+    } catch (err) { toast(err.message, 'error'); }
+    finally { setBusy(null); }
+  };
+  return (
+    <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      className="mt-4 rounded-2xl bg-coral/15 p-5 ring-1 ring-coral/40">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="display text-xl text-ink">Gone quiet</h2>
+        <p className="text-sm text-slate-700">No update in 14+ days. Follow up, or clear them off your board.</p>
+      </div>
+      <ul className="mt-4 grid gap-2 md:grid-cols-2">
+        {items.map((a) => (
+          <li key={a._id} className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-[#e8e2cf]">
+            <CompanyAvatar name={a.company} size="size-9" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-ink">{a.company}</p>
+              <p className="truncate text-xs text-slate-500">{a.stage} · quiet for <strong className="text-coral">{a.days} days</strong></p>
+            </div>
+            <div className="flex gap-1.5">
+              <button className="btn-lime px-2.5 py-1.5 text-xs" disabled={busy === a._id} onClick={() => act(a, 'followed')}>Followed up</button>
+              <button className="btn-ghost px-2.5 py-1.5 text-xs text-rose-700 hover:bg-rose-50" disabled={busy === a._id} onClick={() => act(a, 'rejected')}>Mark rejected</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </motion.section>
+  );
+}
+
 function greeting() {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -81,7 +121,7 @@ export default function DashboardPage() {
     return (
       <div>{header}
         <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-4">{Array.from({ length: 4 }, (_, i) => <div key={i} className="card h-[118px] animate-pulse bg-slate-100/60" />)}</div>
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">{Array.from({ length: 2 }, (_, i) => <div key={i} className="card h-72 animate-pulse bg-slate-100/60" />)}</div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">{Array.from({ length: 2 }, (_, i) => <div key={i} className="card h-72 animate-pulse bg-slate-100/60" />)}</div>
       </div>
     );
   }
@@ -114,6 +154,10 @@ export default function DashboardPage() {
         <StatTile index={2} label="Response rate" icon="inbox" value={Math.round(t.responseRate * 100)} suffix="%" sub="Companies that replied" />
         <StatTile index={3} label="Offers" icon="sparkles" value={t.offers} sub={`${t.rejected} rejected`} to="/applications?stage=Offer" />
       </div>
+
+      {stats.stale?.length > 0 && (
+        <NudgeCard items={stats.stale} onDone={(id) => setStats((st) => ({ ...st, stale: st.stale.filter((x) => x._id !== id) }))} />
+      )}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <ChartCard title="Placement funnel" subtitle="Applications that reached each round · % of previous round"

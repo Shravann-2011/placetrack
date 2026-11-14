@@ -15,6 +15,14 @@ const eventSchema = new mongoose.Schema(
     location: { type: String, trim: true, maxlength: 300 }, // venue or meeting link
     notes: { type: String, maxlength: 2000 },
     done: { type: Boolean, default: false },
+    // Prep checklist for this round ("Revise DBMS joins", "Carry 3 resume copies")
+    checklist: {
+      type: [{ text: { type: String, required: true, trim: true, maxlength: 200 }, done: { type: Boolean, default: false } }],
+      validate: [(v) => v.length <= 30, 'At most 30 checklist items'],
+      default: [],
+    },
+    // Written after the round: what was asked, how it went
+    debrief: { type: String, maxlength: 4000 },
   },
   { timestamps: true }
 );

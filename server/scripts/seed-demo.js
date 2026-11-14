@@ -21,6 +21,9 @@ const SAMPLE = [
   ['Swiggy', 'Backend Intern', 'Applied', 'LinkedIn', 'Internship', 40, -2, 9, 'Remote'],
   ['Cognizant', 'Programmer Analyst', 'Technical', 'Campus', 'Full-time', 4, -18, 0, 'Kolkata'],
   ['PhonePe', 'SDE 1', 'Applied', 'Referral', 'Full-time', 18, -1, 20, 'Bengaluru'],
+  ['Accolite', 'Associate Software Engineer', 'Offer', 'Campus', 'Full-time', 9, -28, null, 'Hyderabad'],
+  ['Mindtree', 'Graduate Engineer Trainee', 'Applied', 'Job Portal', 'Full-time', 4.5, -26, null, 'Bengaluru'],   // gone quiet
+  ['Hexaware', 'Software Engineer', 'Aptitude/OA', 'Company Website', 'Full-time', 4, -24, null, 'Chennai'],      // gone quiet
   ['Capgemini', 'Analyst', 'Rejected', 'Campus', 'Full-time', 4.25, -25, null, 'Mumbai'],
 ];
 
@@ -47,6 +50,12 @@ function historyFor(stage, appliedDaysAgo) {
     appliedDate: day(applied), dueDate: due === null ? null : day(due),
     stageHistory: historyFor(stage, applied),
   }));
+  // Offer details for the two offers, so the comparison page has something to compare
+  const OFFERS = {
+    Wipro: { fixedLpa: 3.5, variableLpa: 0, joiningBonus: 0, bondMonths: 12, bondPenalty: 75000, location: 'Pune', joiningDate: day(240), acceptBy: day(5), notes: 'Elite NTH track. Training in Mysuru.' },
+    Accolite: { fixedLpa: 8, variableLpa: 1, joiningBonus: 50000, bondMonths: 0, location: 'Hyderabad', joiningDate: day(230), acceptBy: day(12), notes: 'Product engineering team, Java + React.' },
+  };
+  docs.forEach((d) => { if (OFFERS[d.company]) d.offer = OFFERS[d.company]; });
   const apps = await Application.insertMany(docs); // insertMany skips the save hook, so our history is kept
   const byCompany = Object.fromEntries(apps.map((a) => [a.company, a._id]));
 
@@ -70,6 +79,16 @@ function historyFor(stage, appliedDaysAgo) {
     const start = at(day, Math.floor(h), Math.round((h % 1) * 60));
     const end = endH === null ? start : at(day, Math.floor(endH), Math.round((endH % 1) * 60));
     return { user: user._id, application: byCompany[company], type, start, end, mode, location };
+  });
+  const prep = {
+    'TCS|Online assessment': [['Test laptop, webcam and internet', true], ['Practise 2 timed aptitude sets', true], ['Revise arrays, strings and DP', false], ['Keep ID and admit card ready', false]],
+    'Zoho|Technical interview': [['Revise DBMS, OS and CN basics', true], ['Re-read my resume projects', false], ['Solve 3 medium DSA problems', false]],
+    'Razorpay|HR interview': [['Prepare "Tell me about yourself"', true], ['Research the company and its products', true]],
+  };
+  events.forEach((e) => {
+    const company = Object.keys(byCompany).find((c) => String(byCompany[c]) === String(e.application));
+    const items = prep[`${company}|${e.type}`];
+    if (items) e.checklist = items.map(([text, done]) => ({ text, done }));
   });
   await Event.insertMany(events);
   console.log(`Demo account ready: ${DEMO.email} / ${DEMO.password} (${docs.length} applications, ${events.length} events)`);

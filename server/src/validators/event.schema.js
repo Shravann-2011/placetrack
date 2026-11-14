@@ -17,6 +17,11 @@ const base = {
   location: z.string().trim().max(300).optional(),
   notes: z.string().max(2000).optional(),
   done: z.boolean().optional(),
+  checklist: z.array(z.object({
+    text: z.string().trim().min(1, 'Checklist item cannot be empty').max(200),
+    done: z.boolean().optional(),
+  })).max(30, 'At most 30 checklist items').optional(),
+  debrief: z.string().max(4000).optional(),
 };
 
 const endAfterStart = (d) => !d.start || !d.end || d.end >= d.start;

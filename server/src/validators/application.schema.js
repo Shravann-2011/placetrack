@@ -21,6 +21,18 @@ const createApplicationSchema = z.object({
   appliedDate: dateField.optional(),
   dueDate: dateField.nullable().optional(), // null clears the deadline
   notes: z.string().max(2000).optional(),
+  followedUpAt: dateField.nullable().optional(),
+  offer: z.object({
+    fixedLpa: z.number().min(0).max(500).nullable().optional(),
+    variableLpa: z.number().min(0).max(500).nullable().optional(),
+    joiningBonus: z.number().min(0).max(1e8).nullable().optional(),
+    bondMonths: z.number().int().min(0).max(120).nullable().optional(),
+    bondPenalty: z.number().min(0).max(1e8).nullable().optional(),
+    location: z.string().trim().max(100).optional(),
+    joiningDate: dateField.nullable().optional(),
+    acceptBy: dateField.nullable().optional(),
+    notes: z.string().max(1000).optional(),
+  }).optional(),
 });
 
 const updateApplicationSchema = createApplicationSchema

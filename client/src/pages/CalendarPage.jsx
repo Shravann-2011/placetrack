@@ -42,6 +42,10 @@ function EventCard({ e, clash, onEdit, onToggleDone, compact }) {
           <span className={`rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset ${s.chip}`}>{compact ? s.short : e.type}</span>
           <span className="font-semibold text-slate-700 tabular-nums">{timeLabel(e)}</span>
           {clash && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900"><Icon name="alert" className="size-3" /> Clash</span>}
+          {e.checklist?.length > 0 && (() => {
+            const ready = e.checklist.filter((c) => c.done).length;
+            return <span className={`rounded-full px-2 py-0.5 font-semibold ${ready === e.checklist.length ? 'bg-lime text-ink' : 'bg-sand text-slate-700'}`}>{ready}/{e.checklist.length} ready</span>;
+          })()}
         </div>
         <p className={`mt-1.5 truncate font-semibold text-ink ${e.done ? 'line-through' : ''}`}>{e.application?.company}{e.title ? ` · ${e.title}` : ''}</p>
         {!compact && (

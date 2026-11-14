@@ -1,4 +1,5 @@
 const Application = require('../models/Application');
+const Event = require('../models/Event');
 const { SOURCES } = require('../constants');
 
 // The "forward" journey. Rejected is an exit, not a step, so it's not in the funnel.
@@ -6,6 +7,7 @@ const FUNNEL = ['Applied', 'Aptitude/OA', 'GD', 'Technical', 'HR', 'Offer'];
 const WEEKS = 8;
 const DAY = 24 * 60 * 60 * 1000;
 const IST_OFFSET = 330 * 60 * 1000; // weeks are counted in Indian time (Mon–Sun)
+const STALE_DAYS = 14;
 
 // Monday 00:00 IST of the week containing `date`, returned as a UTC timestamp
 function weekStartIST(date) {
@@ -20,8 +22,10 @@ function weekStartIST(date) {
 // one student has at most a few hundred applications, so this is fast.
 async function getStats(req, res) {
   const apps = await Application.find({ user: req.user._id })
-    .select('stage source appliedDate dueDate stageHistory.stage')
+    .select('company role stage source appliedDate dueDate followedUpAt createdAt stageHistory')
     .lean();
+  // Applications with a round still ahead are waiting on that round, not "gone quiet"
+  const upcoming = new Set((await Event.distinct('application', { user: req.user._id, end: { $gte: new Date() }, done: false })).map(String));
 
   const now = new Date();
   const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
@@ -29,6 +33,7 @@ async function getStats(req, res) {
 
   let responded = 0;
   let dueThisWeek = 0;
+  const stale = [];
   const funnelCounts = FUNNEL.map(() => 0);
   const byStage = {};
   const bySource = Object.fromEntries(SOURCES.map((s) => [s, { total: 0, responded: 0, offers: 0 }]));
@@ -55,7 +60,18 @@ async function getStats(req, res) {
 
     const active = !['Offer', 'Rejected'].includes(app.stage);
     if (active && app.dueDate && app.dueDate >= startOfToday && app.dueDate < weekAhead) dueThisWeek++;
+
+    // "No update in 14 days": last stage change or follow-up, whichever is later
+    if (active && !upcoming.has(String(app._id))) {
+      const lastChange = Math.max(
+        ...(app.stageHistory || []).map((h) => +new Date(h.changedAt)),
+        +new Date(app.followedUpAt || 0),
+      );
+      const days = Math.floor((now - lastChange) / DAY);
+      if (days >= STALE_DAYS) stale.push({ _id: app._id, company: app.company, role: app.role, stage: app.stage, days });
+    }
   }
+  stale.sort((a, b) => b.days - a.days);
 
   // Applications per week for the last 8 weeks, including empty weeks
   const thisWeek = weekStartIST(now);
@@ -78,7 +94,9 @@ async function getStats(req, res) {
         rejected: byStage.Rejected || 0,
         responseRate: total ? responded / total : 0,
         dueThisWeek,
+        stale: stale.length,
       },
+      stale: stale.slice(0, 10),
       byStage,
       funnel: FUNNEL.map((stage, i) => ({ stage, count: funnelCounts[i] })),
       weekly,

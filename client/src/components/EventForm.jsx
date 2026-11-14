@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '../lib/api';
-import { EVENT_MODES, EVENT_TYPES, DEADLINE_TYPES } from '../lib/constants';
+import { EVENT_MODES, EVENT_TYPES, DEADLINE_TYPES, PREP_TEMPLATES } from '../lib/constants';
 import { dayKey, eventTitle, fmtDay, timeLabel } from '../lib/calendar';
 import { useToast } from '../context/ToastContext';
 import { Field, Modal, Spinner } from './ui';
@@ -16,13 +16,58 @@ function toForm(ev, defaults) {
       application: ev.application?._id || ev.application, type: ev.type, title: ev.title || '',
       date: dayKey(ev.start), startTime: timeOf(ev.start), endTime: timeOf(ev.end),
       allDay: Boolean(ev.allDay), mode: ev.mode || 'Online', location: ev.location || '', notes: ev.notes || '', done: Boolean(ev.done),
+      checklist: (ev.checklist || []).map((c) => ({ text: c.text, done: Boolean(c.done) })), debrief: ev.debrief || '',
     };
   }
   return {
     application: defaults?.application || '', type: defaults?.type || 'Online assessment', title: '',
     date: defaults?.date || dayKey(new Date()), startTime: '10:00', endTime: '11:00',
-    allDay: false, mode: 'Online', location: '', notes: '', done: false,
+    allDay: false, mode: 'Online', location: '', notes: '', done: false, checklist: [], debrief: '',
   };
+}
+
+// Prep checklist editor: tick items, add your own, or tap a suggestion for this round type
+function Checklist({ items, type, onChange }) {
+  const [draft, setDraft] = useState('');
+  const add = (text) => {
+    const t = text.trim();
+    if (!t || items.some((i) => i.text.toLowerCase() === t.toLowerCase()) || items.length >= 30) return;
+    onChange([...items, { text: t, done: false }]);
+  };
+  const suggestions = (PREP_TEMPLATES[type] || []).filter((t) => !items.some((i) => i.text === t));
+  const doneCount = items.filter((i) => i.done).length;
+  return (
+    <div className="sm:col-span-2">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="label mb-0">Prep checklist</span>
+        {items.length > 0 && <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${doneCount === items.length ? 'bg-lime text-ink' : 'bg-sand text-slate-700'}`}>{doneCount}/{items.length} ready</span>}
+      </div>
+      <ul className="space-y-1.5">
+        {items.map((it, i) => (
+          <li key={i} className="flex items-center gap-2 rounded-lg bg-sand/60 px-2.5 py-1.5">
+            <input type="checkbox" className="size-4 accent-ink" checked={it.done} aria-label={it.text}
+              onChange={() => onChange(items.map((x, j) => (j === i ? { ...x, done: !x.done } : x)))} />
+            <span className={`flex-1 text-sm ${it.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{it.text}</span>
+            <button type="button" className="text-slate-400 hover:text-rose-600" aria-label={`Remove ${it.text}`} onClick={() => onChange(items.filter((_, j) => j !== i))}><Icon name="x" className="size-3.5" /></button>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 flex gap-2">
+        <input className="input" value={draft} placeholder="Add a prep item…" maxLength={200}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(draft); setDraft(''); } }} />
+        <button type="button" className="btn-secondary" onClick={() => { add(draft); setDraft(''); }}>Add</button>
+      </div>
+      {suggestions.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="py-1 text-xs text-slate-500">Suggestions:</span>
+          {suggestions.map((t) => (
+            <button key={t} type="button" onClick={() => add(t)} className="rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-ink hover:bg-lime/40 hover:text-ink">+ {t}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function EventFormModal({ open, onClose, event, defaults, onSaved }) {
@@ -57,6 +102,7 @@ function EventForm({ event, defaults, isEdit, onClose, onSaved }) {
     const body = {
       type: v.type, title: v.title.trim() || undefined, mode: v.mode, location: v.location.trim() || undefined,
       notes: v.notes.trim() || undefined, allDay: v.allDay, done: v.done,
+      checklist: v.checklist, debrief: v.debrief.trim() || undefined,
       start: combine(v.date, v.allDay ? '00:00' : v.startTime),
       end: isDeadline ? undefined : combine(v.date, v.allDay ? '23:59' : v.endTime),
     };
@@ -139,7 +185,11 @@ function EventForm({ event, defaults, isEdit, onClose, onSaved }) {
           <input {...bind('title')} placeholder="e.g. Zoho round 2: system design" />
         </Field>
         <Field label="Notes" className="sm:col-span-2">
-          <textarea rows={3} {...bind('notes')} placeholder="Topics to revise, documents to carry, dress code…" />
+          <textarea rows={2} {...bind('notes')} placeholder="Dress code, contact person, anything else…" />
+        </Field>
+        <Checklist items={v.checklist} type={v.type} onChange={(checklist) => setV((x) => ({ ...x, checklist }))} />
+        <Field label="What was asked (fill in after the round)" className="sm:col-span-2" hint="Useful for your next interview, and for juniors">
+          <textarea rows={3} {...bind('debrief')} placeholder="Questions asked, topics covered, how it went…" />
         </Field>
         {isEdit && (
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700 sm:col-span-2">

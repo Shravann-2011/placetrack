@@ -13,7 +13,7 @@ function AuthShell({ title, subtitle, children, footer }) {
       {/* Brand panel (desktop only) */}
       <div className="relative hidden overflow-hidden bg-ink p-12 text-cream lg:flex lg:flex-col lg:justify-between">
         <Squiggle className="absolute right-12 top-32 w-28 rotate-6 text-lime" />
-        <Spark className="absolute bottom-40 right-24 w-12 text-pink" />
+        <Spark className="absolute bottom-16 right-16 w-12 text-pink" />
         <Link to="/" className="relative w-fit rounded-full bg-cream px-4 py-2"><Logo /></Link>
         <div className="relative">
           <h2 className="display text-6xl xl:text-7xl">Every round.<br />Every deadline.<br /><span className="text-lime">One place.</span></h2>

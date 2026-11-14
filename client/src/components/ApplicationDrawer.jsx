@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { Link } from 'react-router';
 import { celebrate } from '../lib/confetti';
 import { api } from '../lib/api';
 import { STAGE_STYLES } from '../lib/constants';
@@ -159,6 +160,12 @@ function DrawerPanel({ application, onClose, onEdit, onDelete, onChanged }) {
             <Fact icon="mapPin" label="Location">{app.location || '—'}</Fact>
             <Fact icon="calendar" label="Applied">{formatDate(app.appliedDate)}</Fact>
           </div>
+
+          {app.stage === 'Offer' && (
+            <Link to="/offers" onClick={onClose} className="flex items-center gap-3 rounded-xl bg-lime/50 p-4 text-sm font-semibold text-ink ring-1 ring-ink/10 transition hover:bg-lime">
+              <Icon name="sparkles" className="size-5" /> Compare this offer with your others <Icon name="arrowRight" className="ml-auto" />
+            </Link>
+          )}
 
           {app.jobLink && (
             <a href={app.jobLink} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full">
