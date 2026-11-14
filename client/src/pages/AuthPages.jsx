@@ -123,7 +123,7 @@ export function RegisterPage() {
       <FormAlert message={formError} />
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         <Field label="Full name" error={errors.name}>
-          <input className={`input ${errors.name ? 'input-error' : ''}`} autoComplete="name" placeholder="Shravan Kumar" required {...bind('name')} />
+          <input className={`input ${errors.name ? 'input-error' : ''}`} autoComplete="name" placeholder="Your full name" required {...bind('name')} />
         </Field>
         <Field label="Email" error={errors.email}>
           <input type="email" className={`input ${errors.email ? 'input-error' : ''}`} autoComplete="email" placeholder="you@college.edu" required {...bind('email')} />
