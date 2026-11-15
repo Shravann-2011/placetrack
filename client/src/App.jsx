@@ -4,12 +4,25 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { GuestRoute, ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/AppLayout';
-import { lazy, Suspense } from 'react';
+import { lazy as lazyReact, Suspense } from 'react';
 import { FullPageLoader } from './components/ProtectedRoute';
 import { WakeBanner } from './components/WakeBanner';
 
 // Code splitting: each page is downloaded only when it is first visited,
 // so the landing page doesn't make visitors download the whole app.
+// After a new deploy, a tab opened earlier asks for page files that no longer exist
+// (their names change every build). Reload once to get the new version instead of crashing.
+const RELOAD_KEY = 'placetrack-chunk-reload';
+const lazy = (load) => lazyReact(() => load().then((m) => {
+  try { sessionStorage.removeItem(RELOAD_KEY); } catch { /* storage blocked */ }
+  return m;
+}).catch((err) => {
+  let reloaded = false;
+  try { reloaded = sessionStorage.getItem(RELOAD_KEY) === '1'; sessionStorage.setItem(RELOAD_KEY, '1'); } catch { /* storage blocked */ }
+  if (!reloaded) { window.location.reload(); return new Promise(() => {}); }
+  throw err;
+}));
+
 const LoginPage = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/AuthPages').then((m) => ({ default: m.RegisterPage })));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -20,6 +33,23 @@ const DueSoonPage = lazy(() => import('./pages/DueSoonPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+// Shown instead of the router's bare "Unexpected Application Error!" page
+function ErrorPage() {
+  return (
+    <div className="grid min-h-screen place-items-center bg-cream px-6 text-center">
+      <div className="max-w-sm">
+        <p className="display text-5xl text-ink">Oops</p>
+        <h1 className="mt-3 text-xl font-bold text-ink">Something went wrong loading this page</h1>
+        <p className="mt-2 text-sm text-slate-600">PlaceTrack may have just been updated. Reloading usually fixes it. Your data is safe.</p>
+        <div className="mt-6 flex justify-center gap-2">
+          <button className="btn-primary" onClick={() => window.location.reload()}>Reload</button>
+          <a href="/dashboard" className="btn-secondary">Go to dashboard</a>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function NotFound() {
   return (
@@ -36,6 +66,7 @@ function NotFound() {
 const router = createBrowserRouter([
   {
     element: <GuestRoute />,
+    errorElement: <ErrorPage />,
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/register', element: <RegisterPage /> },
@@ -44,6 +75,7 @@ const router = createBrowserRouter([
   },
   {
     element: <ProtectedRoute />,
+    errorElement: <ErrorPage />,
     children: [
       {
         element: <AppLayout />,
