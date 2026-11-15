@@ -218,18 +218,41 @@ function segments(text) {
   return text.split(/\n+|(?<=[.!?])\s+(?=[A-Z0-9])/).map((s) => s.trim()).filter(Boolean);
 }
 
-// The round keyword closest to a date, looking only between the neighbouring dates
-function nearestType(seg, from, to, at, atEnd) {
+// The round keyword closest to a date, looking only between the neighbouring dates.
+// A keyword on the other side of a comma or "|" belongs to the next item in a list
+// ("PPT 9 AM, Aptitude test 11 AM"), so it only wins when nothing closer exists.
+const LIST_BREAK = /[,;|]|\band\b/i;
+function nearestMatch(seg, from, to, at, atEnd) {
   let best = null;
   ROUND_RULES.forEach((rule, order) => {
     for (const m of seg.slice(from, to).matchAll(rule.re)) {
       const start = from + m.index;
       const end = start + m[0].length;
-      const distance = end <= at ? at - end : Math.max(0, start - atEnd) + 0.5; // words before the date win ties
-      if (!best || distance < best.distance || (distance === best.distance && order < best.order)) best = { type: rule.type, distance, order };
+      const gap = end <= at ? seg.slice(end, at) : seg.slice(atEnd, start);
+      let distance = end <= at ? at - end : Math.max(0, start - atEnd) + 0.5; // words before the date win ties
+      if (LIST_BREAK.test(gap)) distance += 100;
+      if (!best || distance < best.distance || (distance === best.distance && order < best.order)) best = { type: rule.type, distance, order, start, end };
     }
   });
-  return best?.type || null;
+  return best;
+}
+const nearestType = (...args) => nearestMatch(...args)?.type || null;
+
+// The words that named the round, used as its title when one day has two of the same kind
+// ("Aptitude test" at 11 and "Communication assessment" at 2)
+const LABEL_STOP = /^(?:the|a|an|for|of|on|and|your|our|in|at|by|day|is|will|be|from|to|with|then|followed)$/i;
+function labelAround(seg, start, end) {
+  const before = seg.slice(0, start).match(/([A-Za-z][\w-]*)\s+$/);
+  const after = seg.slice(end).match(/^\s+(test|round|assessment|interview|discussion|session|talk)\b/i);
+  let label = seg.slice(start, end);
+  const tail = after ? after[0] : '';
+  if (before && !LABEL_STOP.test(before[1]) && !/\d/.test(before[1])) label = `${before[1]} ${label}`;
+  if (after && !new RegExp(`\\b${after[1]}$`, 'i').test(label)) label += ` ${after[1]}`;
+  // "Technical Round 1" / "Round 2": the number is what tells two rounds apart
+  const num = seg.slice(end + tail.length).match(/^\s*[-–]?\s*(\d|i{1,3}|iv|one|two|three)\b(?![:.]\d|\s*(?:am|pm|a\.m|p\.m|st|nd|rd|th|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b)/i);
+  if (num) label += ` ${num[1].toUpperCase()}`;
+  label = clean(label);
+  return label.length > 2 ? label.charAt(0).toUpperCase() + label.slice(1) : null;
 }
 const classify = (seg) => nearestType(seg, 0, seg.length, seg.length, seg.length);
 
@@ -277,13 +300,22 @@ function findEvents(text, reference) {
     results.forEach((r, k) => {
       const from = k > 0 ? results[k - 1].index + results[k - 1].text.length : 0;
       const to = k < results.length - 1 ? results[k + 1].index : seg.length;
-      let type = nearestType(seg, from, to, r.index, r.index + r.text.length);
+      const hit = nearestMatch(seg, from, to, r.index, r.index + r.text.length);
+      let type = hit?.type || null;
+      const label = hit ? labelAround(seg, hit.start, hit.end) : null;
+      // "Reporting time: 9:30 AM" is when to arrive, not when the round starts
+      const reporting = /\breport(?:ing)?\b|\bbe there by\b|\barrive\b/i.test(seg.slice(from, r.index + r.text.length));
       // Just "interview" here, but the line above said which one ("shortlisted for the HR interview")
       if (type === 'Technical interview' && !/technical|tech round|f2f|face/i.test(seg.slice(from, to))) {
         for (let j = i - 1; j >= Math.max(0, i - 2); j--) {
           if (parsed[j].some(hasDay)) break;
           if (classify(segs[j]) === 'HR interview') { type = 'HR interview'; break; }
         }
+      }
+      // "GD on 18 Nov and 19 Nov": a date joined to the one before it is the same kind of round
+      if (!type && k > 0 && /^\s*(?:and|&|,|or|\/|to)\s*$/i.test(seg.slice(from, r.index))) {
+        const prev = [...raw].reverse().find((e) => e.seg === i);
+        if (prev) type = prev.type;
       }
       // No keyword next to it: use a heading line just above ("Online Assessment" / "Date: 20.11.2026")
       for (let j = i - 1; !type && j >= Math.max(0, i - 2); j--) {
@@ -298,7 +330,7 @@ function findEvents(text, reference) {
         const day = dayOf(r.start);
         if (!r.start.isCertain('year') && r.start.date() - reference.instant > 200 * 864e5) day.year -= 1;
         raw.push({
-          seg: i, type, day, snippet: clean(seg).slice(0, 160), matches: [r.text],
+          seg: i, type, day, label, reporting: timed && reporting, snippet: clean(seg).slice(0, 160), matches: [r.text],
           time: timed ? clock(r.start) : null,
           endTime: timed && r.end?.isCertain('hour') ? clock(r.end) : null,
         });
@@ -309,20 +341,24 @@ function findEvents(text, reference) {
       if (!anchor) return;
       const t = { time: clock(r.start), endTime: r.end?.isCertain('hour') ? clock(r.end) : null };
       if (!anchor.time && (!type || !anchor.type || anchor.type === type)) {
-        Object.assign(anchor, t, { type: anchor.type || type });
+        Object.assign(anchor, t, { type: anchor.type || type, reporting });
+        // "GD on 18 and 19 Nov. Reporting time 9 AM": the time is for both days
+        for (const e of raw) if (e !== anchor && e.seg === anchor.seg && e.type === anchor.type && !e.time) Object.assign(e, t, { reporting });
         anchor.matches.push(r.text);
         anchor.extra = [...(anchor.extra || []), i]; // the time's line can say "(HackerRank)" or "in Hall 2"
 
-      } else if (type && type !== anchor.type) {
+      } else if (type && (type !== anchor.type
+        // same kind but clearly another round on the same line: "Aptitude test 11 AM, Communication assessment 2 PM"
+        || (anchor.time && anchor.seg === i && label && anchor.label && label.toLowerCase() !== anchor.label.toLowerCase()))) {
         // "PPT at 9 AM, test at 11 AM" under one date: separate rounds on that day
-        raw.push({ seg: i, type, day: anchor.day, ...t, snippet: clean(seg).slice(0, 160), matches: [r.text] });
+        raw.push({ seg: i, type, day: anchor.day, label, reporting, ...t, snippet: clean(seg).slice(0, 160), matches: [r.text] });
       }
     });
   });
 
   attachPlaces(raw, segs);
 
-  const events = raw.map((e) => {
+  const events = mergeRepeats(raw).map((e) => {
     const type = e.type || 'Other';
     const deadline = DEADLINES.includes(type);
     let start;
@@ -343,7 +379,7 @@ function findEvents(text, reference) {
     const past = +end < +reference.instant - 60 * 60e3; // already over: shown, but not ticked
     return {
       type, start: start.toISOString(), end: end.toISOString(), allDay,
-      ...(other && { title: other.title }),
+      ...((other || e.title) && { title: other ? other.title : e.title }),
       include: !past && (other ? other.include : true),
       ...(past && { past: true }),
       ...(e.mode && !deadline && { mode: e.mode }),
@@ -358,6 +394,66 @@ function findEvents(text, reference) {
     .filter((e) => { const k = `${e.type}|${e.start}`; if (seen.has(k)) return false; seen.add(k); return true; })
     .sort((a, b) => new Date(a.start) - new Date(b.start));
   return { events: unique, rescheduled };
+}
+
+// Messages repeat themselves: "Online test on 21 Nov, 9 to 11 AM" and later "Online Test Date:
+// 21-11-2026", or "Assessment on 22 Nov at 10 AM" plus "Reporting time: 9:30 AM". The same kind of
+// round on the same day is one round, so these fold into a single entry:
+//  - a mention with the start time beats one without a time
+//  - the start time beats the reporting time
+//  - two different start times stay separate only when they are really two rounds; each then
+//    gets a title from its own wording ("Aptitude test" 11 AM / "Communication assessment" 2 PM)
+function mergeRepeats(raw) {
+  // An unlabelled date on a day that has a known round, at the same time or with no time, is that round
+  const NOT_A_ROUND = /\bresults?\b|\bannounce|\bjoining\b|\bdoj\b/i;
+  const sameDay = (a, b) => a.day.year === b.day.year && a.day.month === b.day.month && a.day.day === b.day.day;
+  for (const e of raw) {
+    if (e.type || NOT_A_ROUND.test(e.snippet)) continue;
+    const host = raw.find((o) => o.type && !DEADLINES.includes(o.type) && sameDay(o, e)
+      && (!e.time || (o.time && o.time.hour === e.time.hour && o.time.minute === e.time.minute) || !o.time));
+    if (host) { e.type = host.type; if (!e.label) e.label = host.label; }
+  }
+  const groups = new Map();
+  for (const e of raw) {
+    const key = `${e.type || 'Other'}|${e.day.year}-${e.day.month}-${e.day.day}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(e);
+  }
+  const absorb = (keep, others) => {
+    for (const o of others) {
+      if (o === keep) continue;
+      keep.matches.push(...o.matches);
+      keep.extra = [...(keep.extra || []), o.seg, ...(o.extra || [])];
+      if (!keep.endTime && o.endTime && o.time && keep.time && o.time.hour === keep.time.hour && o.time.minute === keep.time.minute) keep.endTime = o.endTime;
+      keep.mode = keep.mode || o.mode;
+      keep.location = keep.location || o.location;
+    }
+    return keep;
+  };
+  const out = [];
+  for (const list of groups.values()) {
+    if (list.length === 1) { out.push(list[0]); continue; }
+    const starts = list.filter((e) => e.time && !e.reporting);
+    const pool = starts.length ? starts : list.filter((e) => e.time).length ? list.filter((e) => e.time) : list;
+    // one entry per distinct start time; the first mention with an end time is the fullest
+    const byTime = new Map();
+    for (const e of pool) {
+      const k = e.time ? `${e.time.hour}:${e.time.minute}` : 'day';
+      if (!byTime.has(k)) byTime.set(k, e); // the first mention is usually the full sentence
+    }
+    let kept = [...byTime.values()];
+    // Two times for one round in one sentence pair (e.g. "10 AM" and "10:00 AM – 11 AM" read twice)
+    // collapse; different times with the same wording are the same round said twice, keep the first
+    if (kept.length > 1) {
+      const labels = new Set(kept.map((e) => (e.label || '').toLowerCase()));
+      if (labels.size < kept.length) kept = [kept.sort((a, b) => a.seg - b.seg)[0]];
+    }
+    const rest = list.filter((e) => !kept.includes(e));
+    absorb(kept[0], rest);
+    if (kept.length > 1) for (const e of kept) if (e.label) e.title = e.label;
+    out.push(...kept);
+  }
+  return out.sort((a, b) => a.seg - b.seg);
 }
 
 // "Venue: Seminar Hall" / "Mode: Online" lines go to the round they sit next to

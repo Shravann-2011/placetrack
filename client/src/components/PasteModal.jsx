@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { api, ApiError } from '../lib/api';
 import { EVENT_MODES, EVENT_STYLES, EVENT_TYPES, JOB_TYPES, STAGES } from '../lib/constants';
@@ -85,6 +85,17 @@ function PasteFlow({ onClose, onAdded }) {
   };
 
   const targetApp = result?.existing.find((a) => a._id === target);
+
+  // Adding to an application you already track: rounds it already has (same kind, same day) are
+  // unticked and labelled, so pasting the same message twice doesn't add them again
+  useEffect(() => {
+    const booked = new Set((targetApp?.events || []).map((e) => `${e.type}|${dayKey(e.start)}`));
+    setEvents((list) => list.map((e) => {
+      const already = booked.has(`${e.type}|${e.date}`);
+      if (already === Boolean(e.already)) return e;
+      return { ...e, already, include: already ? false : !e.past };
+    }));
+  }, [targetApp]);
   const stageChange = Boolean(targetApp && result?.suggestedStage && result.suggestedStage !== targetApp.stage);
 
   const setEv = (i, patch) => setEvents((list) => list.map((e, j) => (j === i ? { ...e, ...patch } : e)));
@@ -252,10 +263,11 @@ function PasteFlow({ onClose, onAdded }) {
                       {!e.allDay && !isDeadline && <><span className="text-xs text-slate-400">to</span><input type="time" className="input w-auto py-1.5" value={e.endTime} onChange={(x) => setEv(i, { endTime: x.target.value })} aria-label="Ends" /></>}
                       {!isDeadline && <label className="flex items-center gap-1 text-xs text-slate-600"><input type="checkbox" className="accent-ink" checked={Boolean(e.allDay)} onChange={() => setEv(i, { allDay: !e.allDay })} /> All day</label>}
                     </div>
-                    {(e.title || e.past) && (
+                    {(e.title || e.past || e.already) && (
                       <div className="mt-1.5 flex flex-wrap gap-1.5 pl-6 text-[11px] font-semibold">
                         {e.title && <span className="rounded bg-sand px-1.5 py-0.5 text-ink">{e.title}</span>}
                         {e.past && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">Already passed</span>}
+                        {e.already && <span className="rounded bg-lime/60 px-1.5 py-0.5 text-ink">Already on your calendar</span>}
                       </div>
                     )}
                     {!isDeadline && e.include && (

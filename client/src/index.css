@@ -100,7 +100,13 @@ a.card, button.card { transition: box-shadow .25s, border-color .25s, transform 
 .stagger-in > *:nth-child(4) { animation-delay: .18s } .stagger-in > *:nth-child(5) { animation-delay: .24s }
 .stagger-in > *:nth-child(6) { animation-delay: .3s }  .stagger-in > *:nth-child(n+7) { animation-delay: .36s }
 
+/* Landing page ticker: two copies side by side, sliding left forever */
+@keyframes marquee { to { transform: translateX(-50%) } }
+.animate-marquee { animation: marquee 28s linear infinite; }
+.animate-marquee:hover { animation-play-state: paused; }
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
   .animate-gradient, .animate-float, .skeleton::after, .stagger-in > *:not(.fixed) { animation: none }
   .btn-primary::after, .btn-lime::after { display: none }
 }

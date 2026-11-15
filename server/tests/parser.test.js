@@ -220,6 +220,53 @@ describe('Stage from the wording', () => {
   });
 });
 
+describe('The same round mentioned more than once', () => {
+  test('a date line repeating the sentence above becomes one round with the full time', () => {
+    const r = parse(`Infosys is conducting a Pre-Placement Talk on 20th November 2026 at 10:00 AM in the Main Auditorium.
+PPT Date: 20/11/2026
+PPT Time: 10:00 AM - 11:00 AM
+Online test will be held on 21st November 2026 from 9 AM to 11 AM.
+Online Test Date: 21-11-2026`);
+    expect(rounds(r)).toEqual(['Pre-placement talk @ 20 Nov 10:00', 'Online assessment @ 21 Nov 09:00']);
+    expect(ist(r.events[0].end)).toBe('20 Nov 11:00');
+    expect(r.events[0].location).toBe('Main Auditorium');
+  });
+  test('reporting time is not a second round, the start time wins', () => {
+    const r = parse(`TCS NQT: Online Assessment on 22 Nov 2026 at 10 AM.
+Assessment Date: 22nd Nov 2026
+Reporting time: 9:30 AM
+The test link will be shared on 22 Nov morning.`);
+    expect(rounds(r)).toEqual(['Online assessment @ 22 Nov 10:00']);
+  });
+  test('a reminder that repeats the test line is one test', () => {
+    const r = parse(`Reminder: Zoho online test is tomorrow (16 Nov) at 2 PM.
+Zoho Online Test – 16/11/2026 – 2:00 PM to 3:30 PM`);
+    expect(rounds(r)).toEqual(['Online assessment @ 16 Nov 14:00']);
+    expect(ist(r.events[0].end)).toBe('16 Nov 15:30');
+  });
+  test('an interview email with date and time on their own lines is one interview', () => {
+    const r = parse(`Your technical interview with Capgemini is scheduled on 24 Nov 2026 at 11:30 AM.
+Interview date: 24/11/2026
+Interview time: 11:30 AM`);
+    expect(rounds(r)).toEqual(['Technical interview @ 24 Nov 11:30']);
+  });
+  test('a one-day schedule gives each round its own time, and names same-kind rounds', () => {
+    const r = parse(`Accenture schedule
+Day 1 (25 Nov): Pre-placement talk 9 AM, Aptitude test 11 AM, Communication assessment 2 PM
+Day 2 (26 Nov): Technical Interview from 10 AM`);
+    expect(rounds(r)).toEqual(['Pre-placement talk @ 25 Nov 09:00', 'Online assessment @ 25 Nov 11:00', 'Online assessment @ 25 Nov 14:00', 'Technical interview @ 26 Nov 10:00']);
+    expect(r.events.slice(1, 3).map((e) => e.title)).toEqual(['Aptitude test', 'Communication assessment']);
+  });
+  test('numbered rounds on the same day stay separate', () => {
+    const r = parse('Wipro: Technical Round 1 on 26 Nov at 10 AM and Technical Round 2 on 26 Nov at 3 PM.');
+    expect(r.events.map((e) => e.title)).toEqual(['Technical Round 1', 'Technical Round 2']);
+  });
+  test('"GD on 18 Nov and 19 Nov" is a GD on both days', () => {
+    const r = parse('Shortlisted students for Deloitte GD on 18th Nov and 19th Nov (batch wise). Reporting time 9 AM.');
+    expect(rounds(r)).toEqual(['Group discussion @ 18 Nov 09:00', 'Group discussion @ 19 Nov 09:00']);
+  });
+});
+
 describe('POST /api/parse', () => {
   test('requires login', async () => {
     await request(app).post('/api/parse').send({ text: 'Infosys online test on 20 Nov at 10 AM' }).expect(401);
@@ -231,6 +278,14 @@ describe('POST /api/parse', () => {
     expect(res.body.data.application.company).toBe('Zoho');
     expect(res.body.data.events[0].type).toBe('Technical interview');
     expect(res.body.data.existing.map((a) => a.company)).toEqual(['Zoho']);
+  });
+  test('lists the rounds an application already has, so a repeat paste can skip them', async () => {
+    const { token } = await createUser();
+    const zoho = await request(app).post('/api/applications').set(auth(token)).send({ company: 'Zoho', role: 'MTS' }).expect(201);
+    await request(app).post('/api/events').set(auth(token))
+      .send({ application: zoho.body.data._id, type: 'Technical interview', start: '2026-11-27T10:30:00.000Z', end: '2026-11-27T11:30:00.000Z' }).expect(201);
+    const res = await request(app).post('/api/parse').set(auth(token)).send({ text: 'Zoho: technical interview on 27 Nov at 4 PM in Room 3.', timezoneOffset: 330 }).expect(200);
+    expect(res.body.data.existing[0].events).toEqual([{ type: 'Technical interview', start: '2026-11-27T10:30:00.000Z' }]);
   });
   test('rejects empty and very long text', async () => {
     const { token } = await createUser();

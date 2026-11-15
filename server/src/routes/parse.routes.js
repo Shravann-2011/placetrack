@@ -3,6 +3,7 @@ const { z } = require('zod');
 const protect = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const Application = require('../models/Application');
+const Event = require('../models/Event');
 const { parsePlacementMessage, MAX_LENGTH } = require('../parser/placementParser');
 
 const parseSchema = z.object({
@@ -24,7 +25,14 @@ router.post('/', validate(parseSchema), async (req, res) => {
   // Already tracking this company? Offer to add the rounds to that application instead.
   const name = result.application.company.toLowerCase();
   const existing = name && apps.filter((a) => a.company.toLowerCase() === name && !['Rejected'].includes(a.stage));
-  res.json({ data: { ...result, existing: existing?.length ? existing.map(({ _id, company, role, stage }) => ({ _id, company, role, stage })) : [] } });
+  // ...and say which of its rounds are already on the calendar, so pasting the same message
+  // twice doesn't add every round again
+  const ids = existing?.length ? existing.map((a) => a._id) : [];
+  const booked = ids.length ? await Event.find({ user: req.user._id, application: { $in: ids } }).select('application type start').lean() : [];
+  res.json({ data: { ...result, existing: (existing || []).map(({ _id, company, role, stage }) => ({
+    _id, company, role, stage,
+    events: booked.filter((e) => String(e.application) === String(_id)).map((e) => ({ type: e.type, start: e.start })),
+  })) } });
 });
 
 module.exports = router;
