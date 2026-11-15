@@ -4,6 +4,7 @@
 // every mark, and a table view so no value is only available on hover.
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import { Segmented, SwapIn } from './Motion';
 import { STAGE_STYLES } from '../lib/constants';
 
 export function ChartCard({ title, subtitle, table, children, action }) {
@@ -20,18 +21,11 @@ export function ChartCard({ title, subtitle, table, children, action }) {
         <div className="flex items-center gap-2">
           {action}
           {table && (
-            <div className="inline-flex rounded-md bg-slate-100 p-0.5 text-xs font-medium" role="tablist" aria-label={`${title} view`}>
-              {['chart', 'table'].map((v) => (
-                <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
-                  className={`rounded px-2 py-1 capitalize transition ${view === v ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}>
-                  {v}
-                </button>
-              ))}
-            </div>
+            <Segmented label={`${title} view`} tone="light" size="sm" value={view} onChange={setView} options={[{ value: 'chart', label: 'Chart' }, { value: 'table', label: 'Table' }]} />
           )}
         </div>
       </div>
-      <div className="flex-1">{view === 'chart' ? children : <DataTable {...table} />}</div>
+      <SwapIn id={view} className="flex-1">{view === 'chart' ? children : <DataTable {...table} />}</SwapIn>
     </motion.section>
   );
 }

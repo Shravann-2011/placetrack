@@ -10,6 +10,7 @@ import { useToast } from '../context/ToastContext';
 import { ChartCard, FunnelChart, SourceChart, WeeklyChart } from '../components/charts';
 import { CountUp } from '../components/CountUp';
 import { motion } from 'motion/react';
+import { RevealText } from '../components/Motion';
 import { ApplicationFormModal } from '../components/ApplicationForm';
 import { ExplainedButton, WelcomeGuide } from '../components/Explainers';
 import { PasteModal } from '../components/PasteModal';
@@ -20,7 +21,7 @@ function StatTile({ label, value, suffix = '', sub, icon, to, index = 0 }) {
     <>
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate-500">{label}</p>
-        <div className="grid size-8 place-items-center rounded-lg bg-brand-50 text-brand-600"><Icon name={icon} /></div>
+        <div className="grid size-8 place-items-center rounded-lg bg-brand-50 text-brand-600 transition duration-300 group-hover:-rotate-6 group-hover:scale-110 group-hover:bg-lime group-hover:text-ink"><Icon name={icon} /></div>
       </div>
       <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900"><CountUp value={value} suffix={suffix} /></p>
       {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
@@ -33,7 +34,7 @@ function StatTile({ label, value, suffix = '', sub, icon, to, index = 0 }) {
     whileHover: to ? { y: -3 } : undefined,
   };
   return to
-    ? <motion.div {...motionProps}><Link to={to} className="card block h-full p-5 transition-shadow hover:border-brand-200 hover:shadow-md">{body}</Link></motion.div>
+    ? <motion.div {...motionProps}><Link to={to} className="card group block h-full p-5 transition-shadow hover:border-brand-200 hover:shadow-lg">{body}</Link></motion.div>
     : <motion.div {...motionProps} className="card p-5">{body}</motion.div>;
 }
 
@@ -123,7 +124,7 @@ export default function DashboardPage() {
   const header = (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="display text-4xl text-ink sm:text-5xl">{greeting()}, {firstName} 👋</h1>
+        <h1 className="display text-4xl text-ink sm:text-5xl"><RevealText text={`${greeting()}, ${firstName}`} /> <motion.span className="inline-block origin-[70%_70%]" initial={{ rotate: 0 }} animate={{ rotate: [0, 18, -8, 14, 0] }} transition={{ delay: 0.6, duration: 1.1 }}>👋</motion.span></h1>
         <p className="mt-2 text-sm text-slate-600">Here’s how your placement season is going.</p>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -137,13 +138,13 @@ export default function DashboardPage() {
   const pasteModal = <><PasteModal open={pasting} onClose={() => setPasting(false)} onAdded={() => setReloadKey((k) => k + 1)} />{guide}</>;
   const modal = <ApplicationFormModal open={adding} application={adding ? {} : null} onClose={() => setAdding(false)} onSaved={() => setReloadKey((k) => k + 1)} />;
 
-  if (error) return <div className="animate-fade-in">{header}<div className="card mt-6"><EmptyState icon="alert" title="Couldn’t load your dashboard">{error}</EmptyState></div></div>;
+  if (error) return <div className="stagger-in">{header}<div className="card mt-6"><EmptyState icon="alert" title="Couldn’t load your dashboard">{error}</EmptyState></div></div>;
 
   if (!stats) {
     return (
       <div>{header}
-        <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-4">{Array.from({ length: 4 }, (_, i) => <div key={i} className="card h-[118px] animate-pulse bg-slate-100/60" />)}</div>
-      <div className="mt-4 grid gap-4 xl:grid-cols-2">{Array.from({ length: 2 }, (_, i) => <div key={i} className="card h-72 animate-pulse bg-slate-100/60" />)}</div>
+        <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-4">{Array.from({ length: 4 }, (_, i) => <div key={i} className="card h-[118px] skeleton bg-slate-100/60" />)}</div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">{Array.from({ length: 2 }, (_, i) => <div key={i} className="card h-72 skeleton bg-slate-100/60" />)}</div>
       </div>
     );
   }
@@ -151,7 +152,7 @@ export default function DashboardPage() {
   const t = stats.totals;
   if (t.total === 0) {
     return (
-      <div className="animate-fade-in">{header}
+      <div className="stagger-in">{header}
         <div className="card mt-6">
           <EmptyState icon="chart" title="Your dashboard is waiting for data"
             action={<button className="btn-primary" onClick={() => setAdding(true)}><Icon name="plus" /> Add your first application</button>}>
@@ -167,7 +168,7 @@ export default function DashboardPage() {
   const best = stats.bySource[0];
 
   return (
-    <div className="animate-fade-in">
+    <div className="stagger-in">
       {header}
 
       <div className="mt-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
@@ -206,12 +207,12 @@ export default function DashboardPage() {
               <Link to="/calendar" className="mt-2 inline-block font-semibold text-ink underline decoration-lime decoration-2 underline-offset-4">Add your OA and interview dates</Link>
             </div>
           ) : (
-            <ul className="-my-1 space-y-2">
+            <ul className="stagger-in -my-1 space-y-2">
               {upcoming.map((e) => {
                 const st = EVENT_STYLES[e.type] || EVENT_STYLES.Other;
                 const today = sameDay(e.start, new Date());
                 return (
-                  <li key={e._id} className="flex items-center gap-3 rounded-xl border border-[#efe9d8] p-2.5">
+                  <li key={e._id} className="flex items-center gap-3 rounded-xl border border-[#efe9d8] p-2.5 transition duration-300 hover:translate-x-1 hover:border-ink/20 hover:bg-sand/40">
                     <div className={`grid size-11 shrink-0 place-items-center rounded-xl text-center leading-none ${today ? 'bg-lime text-ink' : 'bg-sand text-ink'}`}>
                       <span className="text-[10px] font-bold uppercase">{today ? 'Today' : fmtDay(e.start, { weekday: 'short' })}</span>
                       <span className="display text-base">{new Date(e.start).getDate()}</span>

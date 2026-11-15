@@ -13,6 +13,7 @@ import { celebrate } from '../lib/confetti';
 import { useAuth } from '../context/AuthContext';
 import { BADGES, STAGE_XP, computeProgress, xpForMove } from '../lib/progress';
 import { BadgeUnlocks, BadgesModal, GameBar, LevelUp, RoundPips } from '../components/BoardGame';
+import { RevealText } from '../components/Motion';
 
 // Column headers: the path of rounds, like levels in a game
 const ROUND_NO = { Applied: 'Start', 'Aptitude/OA': 'Round 1', GD: 'Round 2', Technical: 'Round 3', HR: 'Round 4', Offer: 'Goal', Rejected: 'Closed' };
@@ -182,10 +183,10 @@ export default function BoardPage() {
   if (error) return <div className="card"><EmptyState icon="alert" title="Couldn’t load the board">{error}</EmptyState></div>;
 
   return (
-    <div className="animate-fade-in">
+    <div className="stagger-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="display text-4xl text-ink sm:text-5xl">Board</h1>
+          <h1 className="display text-4xl text-ink sm:text-5xl"><RevealText text="Board" /></h1>
           <p className="mt-2 text-sm text-slate-600">
             <span className="hidden sm:inline">Drag a card to the next round when you clear it. Every round you clear earns XP.</span>
             <span className="sm:hidden">Tap ⌄ on a card to move it. Every round you clear earns XP.</span>
@@ -240,7 +241,7 @@ export default function BoardPage() {
                 </header>
                 <div className="flex min-h-24 flex-1 flex-col gap-2">
                   {!apps
-                    ? Array.from({ length: stage === 'Applied' ? 3 : 1 }, (_, i) => <div key={i} className="h-[88px] animate-pulse rounded-xl bg-white/70" />)
+                    ? Array.from({ length: stage === 'Applied' ? 3 : 1 }, (_, i) => <div key={i} className="h-[88px] skeleton rounded-xl bg-white/70" />)
                     : (
                       <AnimatePresence initial={false} mode="popLayout">
                         {items.map((app) => (

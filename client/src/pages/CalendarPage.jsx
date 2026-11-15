@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { api } from '../lib/api';
 import { EVENT_STYLES, EVENT_TYPES } from '../lib/constants';
+import { RevealText } from '../components/Motion';
 import {
   addDays, buildIcs, dayKey, downloadFile, eventTitle, findClashIds, fmtDay, fmtMonth, googleCalendarUrl,
   isDeadline, monthGrid, sameDay, startOfDay, startOfWeek, timeLabel,
@@ -164,11 +165,11 @@ export default function CalendarPage() {
   const openAdd = (day) => setEditing({ defaults: { date: dayKey(day || selected) } });
 
   return (
-    <div>
+    <div className="stagger-in">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="display text-4xl text-ink sm:text-5xl">Calendar</h1>
+          <h1 className="display text-4xl text-ink sm:text-5xl"><RevealText text="Calendar" /></h1>
           <p className="mt-2 text-sm text-slate-600">Every OA, GD, interview and deadline in one place.</p>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Field, Spinner } from '../components/ui';
 import { Icon } from '../components/Icon';
+import { RevealText } from '../components/Motion';
 
 function Toggle({ checked, onChange, disabled, label }) {
   return (
@@ -47,8 +48,8 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="display text-4xl text-ink sm:text-5xl">Settings</h1>
+    <div className="stagger-in max-w-2xl">
+      <h1 className="display text-4xl text-ink sm:text-5xl"><RevealText text="Settings" /></h1>
       <p className="mt-2 text-sm text-slate-600">Your account and how PlaceTrack keeps you on time.</p>
 
       <section className="card mt-6 p-6">

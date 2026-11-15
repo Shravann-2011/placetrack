@@ -7,6 +7,7 @@ import { ApplicationFormModal } from '../components/ApplicationForm';
 import { ApplicationDrawer } from '../components/ApplicationDrawer';
 import { ConfirmDialog } from '../components/ui';
 import { useToast } from '../context/ToastContext';
+import { RevealText, Segmented } from '../components/Motion';
 
 const RANGES = [7, 14, 30];
 const PILL = {
@@ -53,20 +54,13 @@ export default function DueSoonPage() {
   }, [days, reloadKey]);
 
   return (
-    <div className="animate-fade-in">
+    <div className="stagger-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="display text-4xl text-ink sm:text-5xl">Due Soon</h1>
+          <h1 className="display text-4xl text-ink sm:text-5xl"><RevealText text="Due Soon" /></h1>
           <p className="mt-2 text-sm text-slate-600">Upcoming OAs, interviews and deadlines for active applications.</p>
         </div>
-        <div className="inline-flex rounded-lg bg-slate-200/70 p-1" role="tablist" aria-label="Time range">
-          {RANGES.map((r) => (
-            <button key={r} role="tab" aria-selected={days === r} onClick={() => setDays(r)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${days === r ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-              {r} days
-            </button>
-          ))}
-        </div>
+        <Segmented label="Time range" value={days} onChange={setDays} options={RANGES.map((r) => ({ value: r, label: `${r} days` }))} />
       </div>
 
       <div className="mt-6">
@@ -74,7 +68,7 @@ export default function DueSoonPage() {
           <div className="card"><EmptyState icon="alert" title="Couldn’t load deadlines">{error}</EmptyState></div>
         ) : !apps ? (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }, (_, i) => <div key={i} className="card h-36 animate-pulse bg-slate-100/60" />)}
+            {Array.from({ length: 3 }, (_, i) => <div key={i} className="card h-36 skeleton bg-slate-100/60" />)}
           </div>
         ) : apps.length === 0 ? (
           <div className="card">
@@ -89,7 +83,7 @@ export default function DueSoonPage() {
                 <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
                   {g.title}<span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600">{g.items.length}</span>
                 </h2>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="stagger-in grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {g.items.map((app) => {
                     const due = describeDue(app.dueDate);
                     return (

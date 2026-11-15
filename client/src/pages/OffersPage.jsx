@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 import { Icon } from '../components/Icon';
 import { CompanyAvatar, EmptyState, Spinner } from '../components/ui';
 import { OfferFormModal } from '../components/OfferForm';
+import { RevealText } from '../components/Motion';
 
 const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
 const lpa = (n) => `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })} LPA`;
@@ -68,10 +69,10 @@ export default function OffersPage() {
   };
 
   return (
-    <div>
+    <div className="stagger-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="display text-4xl text-ink sm:text-5xl">Offers</h1>
+          <h1 className="display text-4xl text-ink sm:text-5xl"><RevealText text="Offers" /></h1>
           <p className="mt-2 text-sm text-slate-600">Compare pay, bonds, location and deadlines side by side. The best value in each row is highlighted.</p>
         </div>
       </div>

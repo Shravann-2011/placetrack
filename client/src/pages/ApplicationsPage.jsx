@@ -14,6 +14,7 @@ import { ExplainedButton } from '../components/Explainers';
 import { PasteModal } from '../components/PasteModal';
 import { celebrate } from '../lib/confetti';
 import { motion } from 'motion/react';
+import { RevealText } from '../components/Motion';
 
 const LIMIT = 10;
 const DUE_STYLES = { past: 'text-slate-400', urgent: 'text-rose-600 font-semibold', soon: 'text-amber-600 font-medium', later: 'text-slate-600' };
@@ -57,7 +58,7 @@ function RowActions({ app, onEdit, onDelete }) {
 
 function SkeletonRows() {
   return Array.from({ length: 5 }, (_, i) => (
-    <div key={i} className="flex animate-pulse items-center gap-4 border-b border-slate-100 px-6 py-4 last:border-0">
+    <div key={i} className="flex skeleton items-center gap-4 border-b border-slate-100 px-6 py-4 last:border-0">
       <div className="size-9 rounded-lg bg-slate-200" />
       <div className="flex-1 space-y-2"><div className="h-3 w-40 rounded bg-slate-200" /><div className="h-3 w-24 rounded bg-slate-100" /></div>
       <div className="hidden h-5 w-24 rounded-full bg-slate-100 sm:block" />
@@ -164,10 +165,10 @@ export default function ApplicationsPage() {
   const total = result?.pagination.total;
 
   return (
-    <div className="animate-fade-in">
+    <div className="stagger-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="display text-4xl text-ink sm:text-5xl">Applications</h1>
+          <h1 className="display text-4xl text-ink sm:text-5xl"><RevealText text="Applications" /></h1>
           <p className="mt-2 text-sm text-slate-600">
             {total === undefined ? 'Loading…' : filtersActive ? `${total} matching application${total === 1 ? '' : 's'}` : `${total} application${total === 1 ? '' : 's'} tracked`}
           </p>

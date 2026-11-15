@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
+import { RouteProgress, useSpotlight } from './Motion';
 import { useAuth } from '../context/AuthContext';
 import { Icon, Logo } from './Icon';
 import { Spinner } from './ui';
@@ -30,29 +31,42 @@ function useNavCounts() {
 }
 
 function SideNav({ totals, onNavigate, layoutKey }) {
+  // A soft highlight glides to whichever item the mouse is over
+  const [hovered, setHovered] = useState(null);
   return (
-    <nav className="space-y-1">
-      {NAV.map((item) => {
-        const count = totals && item.count ? item.count(totals) : 0;
-        return (
-          <NavLink key={item.to} to={item.to} onClick={onNavigate}
-            className={({ isActive }) => `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-              isActive ? 'text-ink' : 'text-cream/70 hover:bg-white/5 hover:text-cream'}`}>
-            {({ isActive }) => (
-              <>
-                {isActive && <motion.span layoutId={layoutKey} className="absolute inset-0 rounded-xl bg-lime" transition={{ type: 'spring', stiffness: 500, damping: 36 }} />}
-                <Icon name={item.icon} className="relative size-[18px]" />
-                <span className="relative flex-1">{item.label}</span>
-                {count > 0 && (
-                  <span className={`relative rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
-                    isActive ? 'bg-ink text-lime' : item.alert ? 'bg-coral text-ink' : 'bg-white/10 text-cream'}`}>{count}</span>
+    <LayoutGroup id={layoutKey}>
+      <nav className="space-y-1" onMouseLeave={() => setHovered(null)}>
+        {NAV.map((item, i) => {
+          const count = totals && item.count ? item.count(totals) : 0;
+          return (
+            <motion.div key={item.to} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 + i * 0.04, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}>
+              <NavLink to={item.to} onClick={onNavigate} onMouseEnter={() => setHovered(item.to)}
+                className={({ isActive }) => `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors duration-200 ${
+                  isActive ? 'text-ink' : 'text-cream/70 hover:text-cream'}`}>
+                {({ isActive }) => (
+                  <>
+                    {hovered === item.to && !isActive && (
+                      <motion.span layoutId="hover" className="absolute inset-0 rounded-xl bg-white/[0.07]" transition={{ type: 'spring', stiffness: 520, damping: 40 }} />
+                    )}
+                    {isActive && <motion.span layoutId="active" className="absolute inset-0 rounded-xl bg-lime shadow-[0_4px_16px_-4px_rgb(212_240_76/0.55)]" transition={{ type: 'spring', stiffness: 500, damping: 36 }} />}
+                    <Icon name={item.icon} className={`relative size-[18px] transition-transform duration-300 ${isActive ? '' : 'group-hover:-rotate-6 group-hover:scale-110'}`} />
+                    <span className="relative flex-1 transition-transform duration-300 group-hover:translate-x-0.5">{item.label}</span>
+                    <AnimatePresence initial={false}>
+                      {count > 0 && (
+                        <motion.span key={count} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 26 }}
+                          className={`relative rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                            isActive ? 'bg-ink text-lime' : item.alert ? 'bg-coral text-ink' : 'bg-white/10 text-cream'}`}>{count}</motion.span>
+                      )}
+                    </AnimatePresence>
+                  </>
                 )}
-              </>
-            )}
-          </NavLink>
-        );
-      })}
-    </nav>
+              </NavLink>
+            </motion.div>
+          );
+        })}
+      </nav>
+    </LayoutGroup>
   );
 }
 
@@ -92,26 +106,38 @@ function ShortcutHint() {
   );
 }
 
-// Phone: a bottom tab bar with the four main pages + "More" (Due Soon, account)
-function BottomTabs({ onMore }) {
+// Phone: a bottom tab bar with the four main pages + "More" (Due Soon, account).
+// The lime pill slides to the tab you pick and the icon gives a small hop.
+function BottomTabs({ onMore, moreOpen }) {
   const tabs = NAV.filter((n) => !['/due-soon', '/offers', '/settings'].includes(n.to));
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 lg:hidden" aria-label="Main">
-      <div className="mx-auto grid max-w-md grid-cols-5">
-        {tabs.map((t) => (
-          <NavLink key={t.to} to={t.to} className={({ isActive }) => `flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold ${isActive ? 'text-lime' : 'text-cream/60'}`}>
-            {({ isActive }) => (
-              <>
-                <span className={`grid h-7 w-12 place-items-center rounded-full transition ${isActive ? 'bg-lime text-ink' : ''}`}><Icon name={t.icon} className="size-[18px]" /></span>
-                {t.short}
-              </>
-            )}
-          </NavLink>
-        ))}
-        <button onClick={onMore} className="flex flex-col items-center gap-0.5 py-1.5 text-[11px] font-semibold text-cream/60">
-          <span className="grid h-7 w-12 place-items-center"><Icon name="more" className="size-5" strokeWidth={3} /></span>More
-        </button>
-      </div>
+    <nav className="fixed inset-x-0 bottom-0 z-[45] border-t border-white/10 bg-ink/95 px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 backdrop-blur-md lg:hidden" aria-label="Main">
+      <LayoutGroup id="tabs">
+        <div className="mx-auto grid max-w-md grid-cols-5">
+          {tabs.map((t) => (
+            <NavLink key={t.to} to={t.to} className={({ isActive }) => `flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold transition-colors duration-300 ${isActive && !moreOpen ? 'text-lime' : 'text-cream/60'}`}>
+              {({ isActive }) => (
+                <motion.span className="flex flex-col items-center gap-0.5" whileTap={{ scale: 0.88 }}>
+                  <span className="relative grid h-7 w-12 place-items-center">
+                    {isActive && !moreOpen && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-full bg-lime" transition={{ type: 'spring', stiffness: 520, damping: 34 }} />}
+                    <motion.span key={String(isActive)} className={`relative ${isActive && !moreOpen ? 'text-ink' : ''}`}
+                      initial={isActive ? { y: 0 } : false} animate={isActive ? { y: [0, -4, 0] } : { y: 0 }} transition={{ duration: 0.4, ease: 'easeOut' }}>
+                      <Icon name={t.icon} className="size-[18px]" />
+                    </motion.span>
+                  </span>
+                  {t.short}
+                </motion.span>
+              )}
+            </NavLink>
+          ))}
+          <motion.button onClick={onMore} whileTap={{ scale: 0.88 }} className={`flex flex-col items-center gap-0.5 py-1.5 text-[11px] font-semibold transition-colors ${moreOpen ? 'text-lime' : 'text-cream/60'}`}>
+            <span className="relative grid h-7 w-12 place-items-center">
+              {moreOpen && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-full bg-lime" transition={{ type: 'spring', stiffness: 520, damping: 34 }} />}
+              <motion.span className={`relative ${moreOpen ? 'text-ink' : ''}`} animate={{ rotate: moreOpen ? 90 : 0 }}><Icon name="more" className="size-5" strokeWidth={3} /></motion.span>
+            </span>More
+          </motion.button>
+        </div>
+      </LayoutGroup>
     </nav>
   );
 }
@@ -121,12 +147,14 @@ export function AppLayout() {
   const totals = useNavCounts();
   const location = useLocation();
   useEffect(() => setMoreOpen(false), [location.pathname]);
+  useSpotlight();
 
   return (
     <div className="min-h-screen">
+      <RouteProgress />
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-ink p-4 lg:flex">
-        <Logo onDark className="px-2 py-1.5" />
+        <motion.div whileHover={{ rotate: -2, scale: 1.03 }} transition={{ type: 'spring', stiffness: 400, damping: 15 }} className="w-fit"><Logo onDark className="px-2 py-1.5" /></motion.div>
         <div className="mt-8 flex-1"><SideNav totals={totals} layoutKey="nav-active" /></div>
         <HowItWorks />
         <ShortcutHint />
@@ -137,12 +165,12 @@ export function AppLayout() {
       <header className="sticky top-0 z-30 flex items-center justify-between bg-ink px-4 py-3 lg:hidden">
         <Logo onDark />
       </header>
-      <BottomTabs onMore={() => setMoreOpen(true)} />
+      <BottomTabs onMore={() => setMoreOpen((o) => !o)} moreOpen={moreOpen} />
       <AnimatePresence>
         {moreOpen && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <motion.div className="absolute inset-0 bg-ink/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMoreOpen(false)} />
-            <motion.div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-ink p-4 pb-8" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            <motion.div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-ink p-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)]" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}>
               <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-white/20" />
               <SideNav totals={totals} layoutKey="nav-active-mobile" onNavigate={() => setMoreOpen(false)} />
@@ -156,7 +184,7 @@ export function AppLayout() {
       <main className="pb-24 lg:pb-0 lg:pl-64">
         {/* Re-keyed on every route change so each page fades/slides in */}
         <motion.div key={location.pathname} className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10"
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, ease: 'easeOut' }}>
+          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}>
           <Suspense fallback={<div className="grid h-64 place-items-center text-brand-600"><Spinner className="size-6" /></div>}>
             <Outlet />
           </Suspense>

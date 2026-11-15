@@ -29,7 +29,7 @@ function Rounds({ app }) {
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rounds & deadlines</h3>
         <button className="btn-ghost px-2 py-1 text-xs" onClick={() => setEditing({ defaults: { application: app._id } })}><Icon name="plus" className="size-3.5" /> Add</button>
       </div>
-      {events === null ? <div className="h-12 animate-pulse rounded-xl bg-sand" />
+      {events === null ? <div className="h-12 skeleton rounded-xl bg-sand" />
         : events.length === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">No rounds added yet. Add the OA, GD or interview dates to see them on your calendar.</p>
         : (
           <ul className="space-y-2">
