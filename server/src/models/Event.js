@@ -23,6 +23,8 @@ const eventSchema = new mongoose.Schema(
     },
     // Written after the round: what was asked, how it went
     debrief: { type: String, maxlength: 4000 },
+    // When the reminder email went out (null = not yet). Reset if the date changes.
+    remindedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -30,6 +32,8 @@ const eventSchema = new mongoose.Schema(
 // Calendar queries: one user's events in a date range, in time order
 eventSchema.index({ user: 1, start: 1 });
 eventSchema.index({ application: 1, start: 1 });
+// Reminder job: upcoming events that haven't been reminded yet
+eventSchema.index({ remindedAt: 1, start: 1 });
 
 eventSchema.set('toJSON', { transform: (doc, ret) => { delete ret.__v; return ret; } });
 

@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { Icon } from '../components/Icon';
 import { EmptyState, Spinner } from '../components/ui';
 import { EventFormModal } from '../components/EventForm';
+import { PasteModal } from '../components/PasteModal';
 
 const VIEWS = [
   { id: 'month', label: 'Month', icon: 'grid' },
@@ -100,6 +101,7 @@ export default function CalendarPage() {
   const [hidden, setHidden] = useState(() => new Set()); // event types filtered out
   const [editing, setEditing] = useState(null); // { event } or { defaults }
   const [reloadKey, setReloadKey] = useState(0);
+  const [pasting, setPasting] = useState(false);
   const toast = useToast();
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
   const [from, to] = useMemo(() => rangeFor(view, cursor), [view, cursor]);
@@ -168,11 +170,12 @@ export default function CalendarPage() {
           <h1 className="display text-4xl text-ink sm:text-5xl">Calendar</h1>
           <p className="mt-2 text-sm text-slate-600">Every OA, GD, interview and deadline in one place.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button className="btn-secondary" onClick={exportIcs} title="Download an .ics file for Google, Apple or Outlook Calendar">
             <Icon name="download" /> <span className="hidden sm:inline">Export to calendar app</span><span className="sm:hidden">Export</span>
           </button>
-          <button className="btn-primary" onClick={() => openAdd()}><Icon name="plus" /> Add event</button>
+          <button className="btn-lime" onClick={() => setPasting(true)}><Icon name="sparkles" /> <span className="hidden sm:inline">Paste a message</span><span className="sm:hidden">Paste</span></button>
+          <button className="btn-primary" onClick={() => openAdd()}><Icon name="plus" /> <span className="hidden sm:inline">Add event</span><span className="sm:hidden">Add</span></button>
         </div>
       </div>
 
@@ -315,6 +318,7 @@ export default function CalendarPage() {
         </div>
       )}
 
+      <PasteModal open={pasting} onClose={() => setPasting(false)} onAdded={reload} />
       <EventFormModal open={editing !== null} event={editing?.event} defaults={editing?.defaults} onClose={() => setEditing(null)} onSaved={reload} />
     </div>
   );

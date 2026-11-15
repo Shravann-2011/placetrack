@@ -178,6 +178,30 @@ module.exports = {
     },
     '/auth/me': {
       get: { tags: ['Auth'], summary: 'The logged-in user', security: [{ bearerAuth: [] }], responses: { 200: json({ type: 'object', properties: { user: { $ref: '#/components/schemas/User' } } }), 401: error('Not logged in') } },
+      patch: {
+        tags: ['Auth'], summary: 'Update your name or reminder setting', security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string' }, reminders: { type: 'object', properties: { email: { type: 'boolean' } } } } }, example: { reminders: { email: false } } } } },
+        responses: { 200: json({ type: 'object', properties: { user: { $ref: '#/components/schemas/User' } } }), 400: validation, 401: error('Not logged in') },
+      },
+    },
+    '/auth/me/test-email': {
+      post: { tags: ['Auth'], summary: 'Send a sample reminder email to yourself', security: [{ bearerAuth: [] }], responses: { 200: json({ type: 'object', properties: { message: { type: 'string' } } }), 501: error('Email is not set up on the server yet') } },
+    },
+    '/parse': {
+      post: {
+        tags: ['Events'], summary: 'Read a pasted placement message (nothing is saved)', security: [{ bearerAuth: [] }],
+        description: 'Rule-based reader (no AI): finds company, role, CTC/stipend, links, eligibility and each dated round. Returns suggestions plus any application you already track for that company.',
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['text'], properties: { text: { type: 'string', minLength: 10, maxLength: 10000 }, timezoneOffset: { type: 'integer', description: 'Minutes ahead of UTC (IST = 330)' } } }, example: { text: 'TCS is visiting campus. Role: Ninja, CTC 3.6 LPA. Online test on 20 Nov at 10 AM.', timezoneOffset: 330 } } } },
+        responses: { 200: json({ type: 'object' }), 400: validation, 401: error('Not logged in') },
+      },
+    },
+    '/cron/reminders': {
+      get: {
+        tags: ['Events'], summary: 'Send due reminder emails (for an uptime monitor)',
+        description: 'Emails each student about every round starting in the next 24 hours, once per round. Protected by CRON_SECRET.',
+        parameters: [{ name: 'key', in: 'query', required: true, schema: { type: 'string' } }],
+        responses: { 200: json({ type: 'object', properties: { data: { type: 'object', properties: { checked: { type: 'integer' }, sent: { type: 'integer' }, failed: { type: 'integer' }, skipped: { type: 'integer' } } } } }), 401: error('Invalid cron key') },
+      },
     },
     '/applications': {
       get: {

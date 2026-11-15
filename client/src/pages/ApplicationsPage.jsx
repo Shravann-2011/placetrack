@@ -10,6 +10,7 @@ import { CompanyAvatar, ConfirmDialog, EmptyState, Pagination } from '../compone
 import { StageSelect } from '../components/StageSelect';
 import { ApplicationFormModal } from '../components/ApplicationForm';
 import { ApplicationDrawer } from '../components/ApplicationDrawer';
+import { PasteModal } from '../components/PasteModal';
 import { celebrate } from '../lib/confetti';
 import { motion } from 'motion/react';
 
@@ -82,6 +83,7 @@ export default function ApplicationsPage() {
   const [deleting, setDeleting] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [viewing, setViewing] = useState(null); // application shown in the side panel
+  const [pasting, setPasting] = useState(false);
   const searchRef = useRef(null);
   const toast = useToast();
 
@@ -169,10 +171,13 @@ export default function ApplicationsPage() {
             {total === undefined ? 'Loading…' : filtersActive ? `${total} matching application${total === 1 ? '' : 's'}` : `${total} application${total === 1 ? '' : 's'} tracked`}
           </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <button className="btn-lime" onClick={() => setPasting(true)}><Icon name="sparkles" /> <span className="hidden sm:inline">Paste a message</span><span className="sm:hidden">Paste</span></button>
         <button className="btn-primary" onClick={() => setEditing({})} title="Shortcut: N">
           <Icon name="plus" /> Add application
           <kbd className="ml-1 hidden rounded bg-white/20 px-1.5 py-0.5 font-sans text-[11px] font-medium sm:inline">N</kbd>
         </button>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -278,6 +283,7 @@ export default function ApplicationsPage() {
         )}
       </div>
 
+      <PasteModal open={pasting} onClose={() => setPasting(false)} onAdded={reload} />
       <ApplicationDrawer application={viewing} onClose={() => setViewing(null)}
         onEdit={(a) => { setViewing(null); setEditing(a); }}
         onDelete={(a) => { setViewing(null); setDeleting(a); }}

@@ -15,6 +15,7 @@ const NAV = [
   { to: '/board', label: 'Board', short: 'Board', icon: 'board' },
   { to: '/due-soon', label: 'Due Soon', short: 'Due', icon: 'clock', count: (t) => t.dueThisWeek, alert: true },
   { to: '/offers', label: 'Offers', short: 'Offers', icon: 'sparkles', count: (t) => t.offers },
+  { to: '/settings', label: 'Settings', short: 'Settings', icon: 'shield' },
 ];
 
 // Live counts next to the nav items; refreshes whenever an application changes
@@ -83,7 +84,7 @@ function ShortcutHint() {
 
 // Phone: a bottom tab bar with the four main pages + "More" (Due Soon, account)
 function BottomTabs({ onMore }) {
-  const tabs = NAV.filter((n) => !['/due-soon', '/offers'].includes(n.to));
+  const tabs = NAV.filter((n) => !['/due-soon', '/offers', '/settings'].includes(n.to));
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-ink px-2 pb-[max(env(safe-area-inset-bottom),6px)] pt-1.5 lg:hidden" aria-label="Main">
       <div className="mx-auto grid max-w-md grid-cols-5">

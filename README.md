@@ -14,10 +14,11 @@ A job and internship application tracker for Indian campus placements. Track eve
 
 | Problem | Feature |
 |---|---|
+| Typing in every drive by hand from the placement email | **Paste a message**: paste the email or WhatsApp text and PlaceTrack reads the company, role, CTC/stipend, links, eligibility and every dated round (rule-based, no AI API), shows what it found highlighted, and adds it after you check it. Spots companies you already track. |
 | Deadlines are scattered across email, WhatsApp and the placement portal | **Calendar** with month, week and agenda views of every registration deadline, OA, GD, interview and offer deadline |
 | One application has many dates | **Rounds per application**: type, time, online / on-campus, venue or link, notes |
 | Two rounds at the same time | **Clash warnings** when an event overlaps another, plus ⚠ badges on the calendar |
-| No reminders | **Add to Google Calendar** in one click, or **export an .ics file** with a reminder 1 hour before each round |
+| No reminders | **Reminder emails**: one email about a day before each round or deadline (with time, venue/link and prep-checklist progress), switchable in Settings. Plus **Add to Google Calendar** and **.ics export** with a 1-hour alert |
 | Scattered preparation | **Prep checklist per round** with suggestions for each round type, an "x/y ready" badge, and a "what was asked" note for afterwards |
 | Applications go quiet and are forgotten | **"Gone quiet" nudge**: active applications with no update in 14+ days (and no round booked), with *Followed up* / *Mark rejected* actions |
 | Comparing offers is confusing | **Offers page**: total CTC, fixed and variable pay, joining bonus, bond, location, joining date and accept-by countdown side by side, best values highlighted |
@@ -30,7 +31,7 @@ A job and internship application tracker for Indian campus placements. Track eve
 - **Detail panel:** stage timeline and rounds for every application
 - **Design:** poster-style UI (Archivo Black headings, forest green / cream / lime / pink), animations that respect the OS reduced-motion setting, mobile bottom tab bar
 - **Security:** bcrypt password hashing, Zod validation, rate limiting, http(s)-only job links, per-user data scoping, consistent JSON errors
-- **Quality:** 56 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
+- **Quality:** 85 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
 
 ## Tech stack
 
@@ -67,6 +68,8 @@ npm install
 npm run dev                  # http://localhost:5173
 ```
 
+Reminder emails (optional): set `BREVO_API_KEY`, `MAIL_FROM` and `CRON_SECRET` (see `server/.env.example`). Emails go through Brevo's HTTPS API because Render's free tier blocks SMTP ports. An UptimeRobot monitor on `/api/cron/reminders?key=...` every 5 minutes both sends due reminders and keeps the free server awake.
+
 Optional demo data: `cd server && npm run seed:demo`, then log in with `demo@placetrack.test` / `demo12345`.
 
 ## Scripts (server)
@@ -98,6 +101,10 @@ Interactive docs: **http://localhost:4000/api/docs** (raw spec at `/api/docs.jso
 | GET | `/api/events?from=&to=` | Calendar events in a date range |
 | POST | `/api/events` | Add a round or deadline (reply lists any clashes) |
 | PATCH / DELETE | `/api/events/:id` | Update (checklist, debrief, done) or delete |
+| POST | `/api/parse` | Read a pasted placement message (returns suggestions, saves nothing) |
+| PATCH | `/api/auth/me` | Change name or turn reminder emails on/off |
+| POST | `/api/auth/me/test-email` | Send yourself a sample reminder |
+| GET | `/api/cron/reminders?key=` | Send due reminders (pinged by an uptime monitor, needs `CRON_SECRET`) |
 
 ## Project structure
 

@@ -18,4 +18,10 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-module.exports = { registerSchema, loginSchema };
+// PATCH /api/auth/me: change your name or reminder setting
+const updateMeSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(60).optional(),
+  reminders: z.object({ email: z.boolean() }).optional(),
+}).refine((v) => Object.keys(v).length > 0, 'Nothing to update');
+
+module.exports = { registerSchema, loginSchema, updateMeSchema };

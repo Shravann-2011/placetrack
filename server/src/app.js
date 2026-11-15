@@ -7,6 +7,8 @@ const { apiLimiter } = require('./middleware/rateLimiters');
 const authRoutes = require('./routes/auth.routes');
 const applicationRoutes = require('./routes/application.routes');
 const eventRoutes = require('./routes/event.routes');
+const parseRoutes = require('./routes/parse.routes');
+const cronRoutes = require('./routes/cron.routes');
 const swaggerUi = require('swagger-ui-express');
 const openapi = require('./docs/openapi');
 
@@ -39,6 +41,8 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapi, {
 app.use('/api/auth', authRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/parse', parseRoutes);
+app.use('/api/cron', cronRoutes);
 
 // These two must stay LAST: unknown routes -> 404, any error -> JSON error
 app.use(notFound);

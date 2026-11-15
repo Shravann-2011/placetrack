@@ -11,6 +11,7 @@ import { ChartCard, FunnelChart, SourceChart, WeeklyChart } from '../components/
 import { CountUp } from '../components/CountUp';
 import { motion } from 'motion/react';
 import { ApplicationFormModal } from '../components/ApplicationForm';
+import { PasteModal } from '../components/PasteModal';
 import { ApplicationDrawer } from '../components/ApplicationDrawer';
 
 function StatTile({ label, value, suffix = '', sub, icon, to, index = 0 }) {
@@ -86,6 +87,7 @@ export default function DashboardPage() {
   const [upcoming, setUpcoming] = useState([]);
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
+  const [pasting, setPasting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [viewing, setViewing] = useState(null);
   const [editing, setEditing] = useState(null);
@@ -110,9 +112,13 @@ export default function DashboardPage() {
         <h1 className="display text-4xl text-ink sm:text-5xl">{greeting()}, {firstName} 👋</h1>
         <p className="mt-2 text-sm text-slate-600">Here’s how your placement season is going.</p>
       </div>
-      <button className="btn-primary" onClick={() => setAdding(true)}><Icon name="plus" /> Add application</button>
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-lime" onClick={() => setPasting(true)}><Icon name="sparkles" /> Paste a message</button>
+        <button className="btn-primary" onClick={() => setAdding(true)}><Icon name="plus" /> Add application</button>
+      </div>
     </div>
   );
+  const pasteModal = <PasteModal open={pasting} onClose={() => setPasting(false)} onAdded={() => setReloadKey((k) => k + 1)} />;
   const modal = <ApplicationFormModal open={adding} application={adding ? {} : null} onClose={() => setAdding(false)} onSaved={() => setReloadKey((k) => k + 1)} />;
 
   if (error) return <div className="animate-fade-in">{header}<div className="card mt-6"><EmptyState icon="alert" title="Couldn’t load your dashboard">{error}</EmptyState></div></div>;
@@ -136,7 +142,7 @@ export default function DashboardPage() {
             Add a few applications and you’ll see your stage funnel, weekly activity and which sources get the most replies.
           </EmptyState>
         </div>
-        {modal}
+        {modal}{pasteModal}
       </div>
     );
   }
@@ -206,7 +212,7 @@ export default function DashboardPage() {
           )}
         </ChartCard>
       </div>
-      {modal}
+      {modal}{pasteModal}
       <ApplicationDrawer application={viewing} onClose={() => setViewing(null)} onChanged={() => setReloadKey((k) => k + 1)}
         onEdit={(a) => { setViewing(null); setEditing(a); }} onDelete={(a) => { setViewing(null); setDeleting(a); }} />
       <ApplicationFormModal open={editing !== null} application={editing} onClose={() => setEditing(null)} onSaved={() => setReloadKey((k) => k + 1)} />

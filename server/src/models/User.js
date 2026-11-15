@@ -9,6 +9,8 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 8, select: false },
     // Bumped on logout to invalidate every refresh token issued before
     tokenVersion: { type: Number, default: 0 },
+    // Email me about each round about a day before it
+    reminders: { email: { type: Boolean, default: true } },
   },
   { timestamps: true }
 );

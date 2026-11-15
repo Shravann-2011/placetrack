@@ -29,6 +29,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       status,
+      updateUser: setUser,
       login: async (credentials) => finishLogin(await api('/auth/login', { method: 'POST', body: credentials })),
       register: async (details) => finishLogin(await api('/auth/register', { method: 'POST', body: details })),
       logout: async () => {

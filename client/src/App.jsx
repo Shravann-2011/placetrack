@@ -19,6 +19,7 @@ const BoardPage = lazy(() => import('./pages/BoardPage'));
 const DueSoonPage = lazy(() => import('./pages/DueSoonPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const OffersPage = lazy(() => import('./pages/OffersPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 function NotFound() {
   return (
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
           { path: '/calendar', element: <CalendarPage /> },
           { path: '/offers', element: <OffersPage /> },
           { path: '/due-soon', element: <DueSoonPage /> },
+          { path: '/settings', element: <SettingsPage /> },
         ],
       },
     ],

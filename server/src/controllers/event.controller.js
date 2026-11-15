@@ -53,6 +53,7 @@ async function updateEvent(req, res) {
   const event = await findOwnedEvent(req);
   event.set(req.body);
   if (req.body.start && !req.body.end && event.end < event.start) event.end = event.start;
+  if (event.isModified('start')) event.remindedAt = null; // moved: remind again for the new date
   await event.save();
   await event.populate(WITH_APP);
   const clashes = await findClashes(req.user._id, event.start, event.end, event._id, event.allDay);
