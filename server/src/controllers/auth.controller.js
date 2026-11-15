@@ -86,9 +86,12 @@ async function sendTestEmail(req, res) {
   if (!isMailConfigured()) return res.status(501).json({ error: 'Email is not set up on the server yet' }) // not 503: the app retries 503 as "server waking up";
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const sample = {
-    type: 'Online assessment', start, end: start, allDay: false, mode: 'Online',
+    type: 'Online assessment', start, end: new Date(+start + 90 * 60 * 1000), allDay: false, mode: 'Online',
     application: { company: 'Sample Company', role: 'Software Engineer' },
-    checklist: [{ text: 'Revise DBMS joins', done: true }, { text: 'Practise 2 DP problems', done: false }],
+    checklist: [
+      { text: 'Revise DBMS joins', done: true }, { text: 'Practise 2 DP problems', done: true },
+      { text: 'Test webcam and mic', done: false }, { text: 'Keep college ID ready', done: false },
+    ],
   };
   const mail = buildReminder(sample, req.user);
   await sendMail({ to: req.user.email, toName: req.user.name, ...mail, subject: `[Test] ${mail.subject}` });

@@ -43,8 +43,8 @@ describe('Reminder emails', () => {
     expect(sent[0].headers['api-key']).toBe('test-key');
     expect(sent[0].body.sender).toEqual({ name: 'PlaceTrack', email: 'alerts@example.com' });
     expect(sent[0].body.to[0].email).toBe(u.user.email);
-    expect(sent[0].body.subject).toMatch(/TCS Online assessment/);
-    expect(sent[0].body.htmlContent).toContain('1/2 done');
+    expect(sent[0].body.subject).toMatch(/^⏰ TCS · Online assessment (today|tomorrow) at /);
+    expect(sent[0].body.htmlContent).toContain('1 of 2 done');
     expect(sent[0].body.htmlContent).toContain('Mock test');
 
     const second = await runDueReminders();
@@ -102,10 +102,25 @@ describe('Reminder emails', () => {
     const now = new Date('2026-11-15T06:00:00Z'); // 11:30 AM IST
     const event = { type: 'Registration deadline', start: new Date('2026-11-16T18:29:00Z'), allDay: false, application: { company: '<b>Acme</b>' }, checklist: [] };
     const mail = buildReminder(event, { name: 'Asha Rao' }, now);
-    expect(mail.subject).toBe('⏰ <b>Acme</b>: Registration deadline closes tomorrow at 11:59 PM');
+    expect(mail.subject).toBe('⏰ <b>Acme</b> · Registration deadline closes tomorrow at 11:59 PM');
+    expect(mail.preheader).toBe('11:59 PM IST');
+    expect(mail.html).not.toContain('Add to Google Calendar'); // deadlines don't get a calendar slot
     expect(mail.html).toContain('&lt;b&gt;Acme&lt;/b&gt;');
     expect(mail.html).not.toContain('<b>Acme</b>');
     expect(mail.text).toContain('Hi Asha');
+  });
+
+  test('an untitled "Other" event reads as "Event"; a meeting link becomes a Join button', () => {
+    const now = new Date('2026-11-15T06:00:00Z');
+    const mail = buildReminder({
+      type: 'Other', start: new Date('2026-11-15T06:16:00Z'), end: new Date('2026-11-15T07:16:00Z'), mode: 'Online',
+      location: 'https://meet.google.com/abc-defg-hij', application: { company: 'Computacenter', role: 'SDE' }, checklist: [],
+    }, { name: 'Shravan Kumar' }, now);
+    expect(mail.subject).toBe('⏰ Computacenter · Event today at 11:46 AM');
+    expect(mail.html).toContain('in 16 minutes');
+    expect(mail.html).toContain('Join meeting');
+    expect(mail.html).toContain('calendar.google.com/calendar/render');
+    expect(mail.html).not.toMatch(/>Other</);
   });
 
   test('sender parsing', () => {

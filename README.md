@@ -31,7 +31,7 @@ A job and internship application tracker for Indian campus placements. Track eve
 - **Detail panel:** stage timeline and rounds for every application
 - **Design:** poster-style UI (Archivo Black headings, forest green / cream / lime / pink), animations that respect the OS reduced-motion setting, mobile bottom tab bar
 - **Security:** bcrypt password hashing, Zod validation, rate limiting, http(s)-only job links, per-user data scoping, consistent JSON errors
-- **Quality:** 97 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
+- **Quality:** 98 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
 
 ## Tech stack
 
