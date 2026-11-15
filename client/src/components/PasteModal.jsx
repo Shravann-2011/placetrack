@@ -1,18 +1,26 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { api, ApiError } from '../lib/api';
-import { EVENT_STYLES, EVENT_TYPES, JOB_TYPES } from '../lib/constants';
+import { EVENT_MODES, EVENT_STYLES, EVENT_TYPES, JOB_TYPES, STAGES } from '../lib/constants';
 import { dayKey, eventTitle, fmtDay, timeLabel } from '../lib/calendar';
 import { useToast } from '../context/ToastContext';
 import { Field, Modal, Spinner } from './ui';
 import { Icon } from './Icon';
 
-const EXAMPLE = `Infosys is visiting campus! 🎓
-Role: Systems Engineer | CTC: 3.6 LPA | Location: Bengaluru
-Eligibility: 60% throughout, no active backlogs.
-Register by 18th Nov 11:59 PM: forms.gle/infosys-drive
-Online test on 20 Nov at 10 AM (HackerRank).
-Interviews on 25 Nov.`;
+const EXAMPLE = `*🚨 Campus Drive Alert 🚨*
+*Company:* Nimbus Analytics Pvt. Ltd.
+*Role:* Associate Software Engineer
+*CTC:* ₹ 6.5 LPA | *Location:* Bengaluru
+*Eligibility:* CSE, ISE, ECE | 7 CGPA & above | No active backlogs
+
+Register here 👉 forms.gle/nimbus-drive before 18/11/2026, 5 PM
+
+*Online Assessment*
+📅 Date: 20.11.2026
+⏰ Time: 2:00 PM to 3:30 PM (HackerRank)
+
+Shortlisted students: technical interview on 24 Nov, HR round on 25 Nov at 11 AM
+📍 Venue: Seminar Hall, Block C`;
 
 // Colour for each kind of highlighted text, matching the field it fills
 const MARK = {
@@ -56,6 +64,7 @@ function PasteFlow({ onClose, onAdded }) {
   const [app, setApp] = useState(null);
   const [events, setEvents] = useState([]);
   const [target, setTarget] = useState('new'); // 'new' or an existing application id
+  const [moveStage, setMoveStage] = useState(true); // existing application: apply the stage the message implies
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
@@ -68,12 +77,15 @@ function PasteFlow({ onClose, onAdded }) {
       const d = res.data;
       setResult(d);
       setApp({ ...d.application, ctc: d.application.ctc ?? '' });
-      setEvents(d.events.map((e) => ({ ...e, include: true, date: dayKey(e.start), time: timeOf(e.start), endTime: timeOf(e.end) })));
+      setEvents(d.events.map((e) => ({ ...e, include: e.include !== false, date: dayKey(e.start), time: timeOf(e.start), endTime: timeOf(e.end) })));
       setTarget(d.existing[0]?._id || 'new');
       setStep('review');
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   };
+
+  const targetApp = result?.existing.find((a) => a._id === target);
+  const stageChange = Boolean(targetApp && result?.suggestedStage && result.suggestedStage !== targetApp.stage);
 
   const setEv = (i, patch) => setEvents((list) => list.map((e, j) => (j === i ? { ...e, ...patch } : e)));
   const addRound = () => setEvents((list) => [...list, { type: 'Online assessment', include: true, date: dayKey(new Date()), time: '10:00', endTime: '11:00', allDay: false, snippet: 'Added by you' }]);
@@ -92,21 +104,34 @@ function PasteFlow({ onClose, onAdded }) {
           ...(app.ctc !== '' && { ctc: Number(app.ctc) }), ...(app.location.trim() && { location: app.location.trim() }),
           ...(app.jobLink && { jobLink: app.jobLink }), ...(app.notes.trim() && { notes: app.notes.trim() }),
           ...(deadline && { dueDate: toIso(deadline.date, deadline.allDay ? '00:00' : deadline.time) }),
+          ...(app.stage && app.stage !== 'Applied' && { stage: app.stage }),
+          ...(app.stage === 'Offer' && app.offer && Object.keys(app.offer).length && { offer: app.offer }),
         };
         const created = await api('/applications', { method: 'POST', body });
         appId = created.data._id;
       } else {
-        company = result.existing.find((a) => a._id === target)?.company || company;
+        const existing = result.existing.find((a) => a._id === target);
+        company = existing?.company || company;
+        if (stageChange && moveStage) {
+          await api(`/applications/${target}/stage`, { method: 'PATCH', body: { stage: result.suggestedStage } });
+          if (result.suggestedStage === 'Offer' && app.offer && Object.keys(app.offer).length) {
+            await api(`/applications/${target}`, { method: 'PATCH', body: { offer: app.offer } });
+          }
+        }
       }
       const clashes = [];
       for (const e of chosen) {
         const isDeadline = ['Registration deadline', 'Offer deadline'].includes(e.type);
         const start = toIso(e.date, e.allDay ? '00:00' : e.time);
         const end = isDeadline ? start : toIso(e.date, e.allDay ? '23:59' : e.endTime || e.time);
-        const r = await api('/events', { method: 'POST', body: { application: appId, type: e.type, start, end, allDay: Boolean(e.allDay && !isDeadline) } });
+        const body = {
+          application: appId, type: e.type, start, end, allDay: Boolean(e.allDay && !isDeadline),
+          ...(e.title && { title: e.title }), ...(e.mode && !isDeadline && { mode: e.mode }), ...(e.location && !isDeadline && { location: e.location }),
+        };
+        const r = await api('/events', { method: 'POST', body });
         clashes.push(...(r.clashes || []));
       }
-      setDone({ company, count: chosen.length, clashes, isNew: target === 'new' });
+      setDone({ company, count: chosen.length, clashes, isNew: target === 'new', stage: target === 'new' ? app.stage : stageChange && moveStage ? result.suggestedStage : null });
       setStep('done');
       toast(`${company}: ${target === 'new' ? 'added' : 'updated'} with ${chosen.length} round${chosen.length === 1 ? '' : 's'}`);
       onAdded?.();
@@ -138,7 +163,9 @@ function PasteFlow({ onClose, onAdded }) {
       <div className="px-6 py-8 text-center">
         <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-lime text-ink"><Icon name="check" className="size-7" strokeWidth={3} /></div>
         <h3 className="display mt-4 text-2xl text-ink">{done.company} is set up</h3>
-        <p className="mt-1 text-sm text-slate-600">{done.isNew ? 'New application' : 'Existing application'} with {done.count} round{done.count === 1 ? '' : 's'} on your calendar.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          {done.isNew ? 'New application' : 'Existing application'}{done.stage && done.stage !== 'Applied' ? `, now at ${done.stage},` : ''} with {done.count} new round{done.count === 1 ? '' : 's'} on your calendar.
+        </p>
         {done.clashes.length > 0 && (
           <div className="mx-auto mt-5 max-w-md rounded-xl bg-amber-50 p-4 text-left text-sm text-amber-900 ring-1 ring-amber-600/20">
             <p className="font-semibold">Heads up, this overlaps with:</p>
@@ -165,8 +192,9 @@ function PasteFlow({ onClose, onAdded }) {
           <div className="mt-2 flex flex-wrap gap-1.5">
             {LEGEND.map(([k, label]) => <span key={k} className={`rounded px-1.5 py-0.5 text-[11px] font-semibold text-ink ${MARK[k]}`}>{label}</span>)}
           </div>
-          {result.warnings.length > 0 && (
-            <ul className="mt-3 space-y-1 text-xs text-amber-800">{result.warnings.map((w) => <li key={w} className="flex gap-1.5"><Icon name="alert" className="mt-0.5 size-3.5 shrink-0" />{w}</li>)}</ul>
+          {/* Company/role hints don't matter when adding to an application you already track */}
+          {result.warnings.filter((w) => target === 'new' || !/company name|the role/.test(w)).length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs text-amber-800">{result.warnings.filter((w) => target === 'new' || !/company name|the role/.test(w)).map((w) => <li key={w} className="flex gap-1.5"><Icon name="alert" className="mt-0.5 size-3.5 shrink-0" />{w}</li>)}</ul>
           )}
         </div>
 
@@ -181,6 +209,12 @@ function PasteFlow({ onClose, onAdded }) {
                 ))}
                 <label className="flex items-start gap-2"><input type="radio" className="mt-1 accent-ink" checked={target === 'new'} onChange={() => setTarget('new')} /> Create a new application</label>
               </div>
+              {stageChange && (
+                <label className="mt-3 flex items-start gap-2 rounded-lg bg-white p-2.5 ring-1 ring-brand-200">
+                  <input type="checkbox" className="mt-1 accent-ink" checked={moveStage} onChange={() => setMoveStage(!moveStage)} />
+                  <span>Move it from <strong>{targetApp.stage}</strong> to <strong>{result.suggestedStage}</strong> <span className="text-slate-500">(this message sounds like {result.suggestedStage === 'Rejected' ? 'a rejection' : result.suggestedStage === 'Offer' ? 'an offer' : 'you were shortlisted'})</span></span>
+                </label>
+              )}
             </div>
           )}
 
@@ -189,6 +223,7 @@ function PasteFlow({ onClose, onAdded }) {
               <Field label="Company *"><input {...bindApp('company')} placeholder="e.g. Infosys" /></Field>
               <Field label="Role *"><input {...bindApp('role')} placeholder="e.g. Systems Engineer" /></Field>
               <Field label="Type"><select {...bindApp('type')}>{JOB_TYPES.map((t) => <option key={t}>{t}</option>)}</select></Field>
+              <Field label="Stage" hint={result.suggestedStage ? 'Picked from the wording of the message' : undefined}><select {...bindApp('stage')}>{STAGES.map((t) => <option key={t}>{t}</option>)}</select></Field>
               <Field label={app.type === 'Internship' ? 'Stipend (₹ thousand/month)' : 'CTC (LPA)'}><input type="number" min="0" step="0.1" {...bindApp('ctc')} /></Field>
               <Field label="Location"><input {...bindApp('location')} /></Field>
               <Field label="Link"><input {...bindApp('jobLink')} placeholder="https://" /></Field>
@@ -217,6 +252,20 @@ function PasteFlow({ onClose, onAdded }) {
                       {!e.allDay && !isDeadline && <><span className="text-xs text-slate-400">to</span><input type="time" className="input w-auto py-1.5" value={e.endTime} onChange={(x) => setEv(i, { endTime: x.target.value })} aria-label="Ends" /></>}
                       {!isDeadline && <label className="flex items-center gap-1 text-xs text-slate-600"><input type="checkbox" className="accent-ink" checked={Boolean(e.allDay)} onChange={() => setEv(i, { allDay: !e.allDay })} /> All day</label>}
                     </div>
+                    {(e.title || e.past) && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5 pl-6 text-[11px] font-semibold">
+                        {e.title && <span className="rounded bg-sand px-1.5 py-0.5 text-ink">{e.title}</span>}
+                        {e.past && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">Already passed</span>}
+                      </div>
+                    )}
+                    {!isDeadline && e.include && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 pl-6">
+                        <select className="input w-auto py-1 text-xs" value={e.mode || ''} onChange={(x) => setEv(i, { mode: x.target.value || undefined })} aria-label="Mode">
+                          <option value="">Mode…</option>{EVENT_MODES.map((m) => <option key={m}>{m}</option>)}
+                        </select>
+                        <input className="input min-w-0 flex-1 py-1 text-xs" value={e.location || ''} onChange={(x) => setEv(i, { location: x.target.value })} placeholder="Venue or meeting link" aria-label="Venue" />
+                      </div>
+                    )}
                     {e.snippet && <p className="mt-1.5 truncate pl-6 text-xs text-slate-500">“{e.snippet}”</p>}
                   </li>
                 );
@@ -229,7 +278,9 @@ function PasteFlow({ onClose, onAdded }) {
       <div className="sticky bottom-0 flex items-center gap-3 border-t border-slate-100 bg-cream/90 px-6 py-4 backdrop-blur sm:rounded-b-2xl">
         <button className="btn-ghost" onClick={() => setStep('paste')}><Icon name="chevronLeft" /> Edit message</button>
         <span className="flex-1" />
-        <button className="btn-primary" onClick={save} disabled={busy}>{busy && <Spinner className="size-4" />} Add to PlaceTrack</button>
+        <button className="btn-primary" onClick={save} disabled={busy || (target !== 'new' && !events.some((e) => e.include) && !(stageChange && moveStage))}>
+          {busy && <Spinner className="size-4" />} {target === 'new' ? 'Add to PlaceTrack' : 'Update application'}
+        </button>
       </div>
     </div>
   );

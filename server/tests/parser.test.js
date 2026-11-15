@@ -15,7 +15,7 @@ describe('Placement message parser', () => {
 Register by 18th Nov 11:59 PM: forms.gle/abc123. Online test on 20 Nov at 10 AM. Interviews on 25 Nov.`);
     expect(r.application).toMatchObject({ company: 'Infosys', role: 'Systems Engineer', ctc: 3.6, type: 'Full-time', jobLink: 'https://forms.gle/abc123' });
     expect(r.application.notes).toBe('Eligibility: 60% throughout, no active backlogs'); // label not doubled
-    expect(rounds(r)).toEqual(['Registration deadline @ 18 Nov 23:59', 'Online assessment @ 20 Nov 10:00', 'Technical interview @ 25 Nov 12:00 (all day)']);
+    expect(rounds(r)).toEqual(['Registration deadline @ 18 Nov 23:59', 'Online assessment @ 20 Nov 10:00', 'Technical interview @ 25 Nov 00:00 (all day)']);
     expect(r.warnings).toEqual([]);
   });
 
@@ -26,7 +26,7 @@ Package: 8.4 LPA
 Job Location: Chennai
 Last date to apply: 17/11/2026
 Written test: 19/11/2026 at 9:30 AM`);
-    expect(r.application).toMatchObject({ company: 'Zoho Corporation', role: 'Member Technical Staff', ctc: 8.4, location: 'Chennai' });
+    expect(r.application).toMatchObject({ company: 'Zoho', role: 'Member Technical Staff', ctc: 8.4, location: 'Chennai' });
     expect(rounds(r)).toEqual(['Registration deadline @ 17 Nov 23:59', 'Online assessment @ 19 Nov 09:30']);
   });
 
@@ -104,6 +104,122 @@ HR round on 26 Nov at 2 PM.`);
 });
 
 const { app, request, createUser, auth } = require('./helpers');
+describe('Smarter reading (real-world message shapes)', () => {
+  test('WhatsApp forward: *bold*, emojis, date and time on separate lines, venue', () => {
+    const r = parse(`*🚨 Campus Drive Alert 🚨*
+*Company:* Nimbus Analytics Pvt. Ltd.
+*Role:* Associate Software Engineer
+*CTC:* ₹ 6.5 LPA
+*Eligibility:* CSE, ISE, ECE | 7 CGPA & above | No active backlogs
+*Bond:* 2 years service agreement
+📅 *Date:* 21st November 2026
+⏰ *Time:* 9:30 AM
+📍 *Venue:* Seminar Hall, Block C
+Register here 👉 https://forms.gle/xyz123 before 18/11/2026, 5 PM`);
+    expect(r.application).toMatchObject({ company: 'Nimbus Analytics', role: 'Associate Software Engineer', ctc: 6.5, jobLink: 'https://forms.gle/xyz123' });
+    expect(r.application.notes).toBe('Eligibility: CSE, ISE, ECE | 7 CGPA & above | No active backlogs · Bond: 2 years service agreement');
+    expect(rounds(r)).toEqual(['Registration deadline @ 18 Nov 17:00', 'Other @ 21 Nov 09:30']);
+    expect(r.events[1]).toMatchObject({ title: 'Campus drive', mode: 'On campus', location: 'Seminar Hall, Block C' });
+  });
+
+  test('a drive schedule: each line its own round, college names are not the company', () => {
+    const r = parse(`Dear Students,
+Greetings from the Training & Placement Cell.
+The Placement Cell is conducting a campus drive for Kalvium Technologies for the role of Full Stack Developer Intern. Stipend: Rs. 25,000/- per month, PPO based on performance.
+21/11 - Pre-placement talk at 9:30 AM
+22/11 - Aptitude test (online)
+23/11 - Technical and HR interviews
+Last date for registration: 17-11-2026`);
+    expect(r.application).toMatchObject({ company: 'Kalvium Technologies', role: 'Full Stack Developer Intern', ctc: 25, type: 'Internship + Full-time' });
+    expect(rounds(r)).toEqual(['Registration deadline @ 17 Nov 23:59', 'Pre-placement talk @ 21 Nov 09:30', 'Online assessment @ 22 Nov 00:00 (all day)', 'Technical interview @ 23 Nov 00:00 (all day)']);
+    expect(r.events[2].mode).toBe('Online');
+  });
+
+  test('a heading line names the round; time ranges set the end; mode/venue go to the round above', () => {
+    const r = parse(`Company Name : Oracle
+Online Assessment
+Date: 20.11.2026
+Time: 2:00 PM to 4:00 PM
+Mode: Online (HackerEarth)
+Interview Date: 24/11/2026
+Reporting Time: 8:30 AM
+Venue: Placement Block, 2nd floor`);
+    expect(rounds(r)).toEqual(['Online assessment @ 20 Nov 14:00', 'Technical interview @ 24 Nov 08:30']);
+    expect(ist(r.events[0].end)).toBe('20 Nov 16:00');
+    expect(r.events[0].mode).toBe('Online');
+    expect(r.events[1]).toMatchObject({ mode: 'On campus', location: 'Placement Block, 2nd floor' });
+  });
+
+  test('two dates in one sentence get the keyword nearest to each', () => {
+    const r = parse('Registrations for Deloitte close today at 5 PM. Shortlisted students will have a GD on Monday at 11 AM, followed by interviews on Tuesday.');
+    expect(rounds(r)).toEqual(['Registration deadline @ 15 Nov 17:00', 'Group discussion @ 16 Nov 11:00', 'Technical interview @ 17 Nov 00:00 (all day)']);
+    expect(r.suggestedStage).toBeNull(); // a general notice, not "you are shortlisted"
+  });
+
+  test('several rounds under one date, venue shared across that day', () => {
+    const r = parse(`TCS Ninja drive - 20th Nov
+PPT at 9 AM, aptitude test at 11 AM, interviews from 2 PM
+Venue: Main Auditorium`);
+    expect(rounds(r)).toEqual(['Pre-placement talk @ 20 Nov 09:00', 'Online assessment @ 20 Nov 11:00', 'Technical interview @ 20 Nov 14:00']);
+    expect(r.events.every((e) => e.location === 'Main Auditorium')).toBe(true);
+  });
+
+  test('postponed drive keeps only the new date and warns', () => {
+    const r = parse('Please note: the Capgemini drive scheduled on 19 Nov is postponed to 26 Nov, 9 AM. Contact 9876543210 for queries.');
+    expect(rounds(r)).toEqual(['Other @ 26 Nov 09:00']);
+    expect(r.warnings.join(' ')).toMatch(/changes a date/);
+  });
+
+  test('forwarded email: header dates ignored, past dates unticked, durations ignored', () => {
+    const r = parse(`---------- Forwarded message ---------
+From: Placement Office <placements@college.edu>
+Date: Sat, 14 Nov 2026 at 10:15
+Subject: Campus Recruitment - Juspay
+
+Juspay is conducting an online coding challenge for the Software Development Engineer role on 19 Nov 2026 from 7 PM to 9 PM on HackerRank. Registrations opened on 10 Nov and close on 17 Nov at 6 PM.
+Stipend: 40K per month (6 month internship) with PPO.`);
+    expect(r.application).toMatchObject({ company: 'Juspay', role: 'Software Development Engineer', ctc: 40 });
+    expect(rounds(r)).toEqual(['Registration deadline @ 10 Nov 23:59', 'Registration deadline @ 17 Nov 18:00', 'Online assessment @ 19 Nov 19:00']);
+    expect(r.events[0]).toMatchObject({ past: true, include: false });
+    expect(ist(r.application.dueDate)).toBe('17 Nov 18:00'); // the next deadline, not the past one
+  });
+
+  test('results and joining dates are listed but not ticked', () => {
+    const r = parse('Amazon is hiring for SDE-1 and Support Engineer roles. CTC: 18-24 LPA. Apply by 19 Nov. Results will be announced on 30th Nov.');
+    expect(r.application.notes).toContain('CTC range: 18–24 LPA');
+    expect(r.events.find((e) => e.title === 'Results').include).toBe(false);
+  });
+});
+
+describe('Stage from the wording', () => {
+  test('"you have been shortlisted" -> the next round', () => {
+    const r = parse('Congratulations! You have been shortlisted for the Technical Interview with Accolite. Your interview is scheduled on 18/11/2026 at 3:30 PM. Mode: Google Meet. Please be available 15 mins early.');
+    expect(r.suggestedStage).toBe('Technical');
+    expect(rounds(r)).toEqual(['Technical interview @ 18 Nov 15:30']);
+    expect(r.events[0].mode).toBe('Online');
+  });
+
+  test('"the HR interview" is not a time, and "your interview" takes the type named before it', () => {
+    const r = parse('Congratulations! You have been shortlisted for the HR interview with TCS. Your interview is on 20/11/2026 at 10:30 AM in Seminar Hall 2.');
+    expect(rounds(r)).toEqual(['HR interview @ 20 Nov 10:30']);
+    expect(r.events[0]).toMatchObject({ mode: 'On campus', location: 'Seminar Hall 2' });
+    expect(r.suggestedStage).toBe('HR');
+  });
+
+  test('offer: stage, accept-by and joining date fill the offer details', () => {
+    const r = parse('Congratulations! You have been selected by Wipro as Project Engineer. Please accept the offer letter on the portal before 25th Nov 2026. Joining date: 15 July 2027.');
+    expect(r.application).toMatchObject({ company: 'Wipro', role: 'Project Engineer', stage: 'Offer' });
+    expect(ist(r.application.offer.acceptBy)).toBe('25 Nov 23:59');
+    expect(ist(r.application.offer.joiningDate)).toBe('15 Jul 00:00');
+  });
+
+  test('rejection', () => {
+    const r = parse('Dear Candidate, thank you for your interest in Zoho. We regret to inform you that you have not been shortlisted for the next round.');
+    expect(r.suggestedStage).toBe('Rejected');
+    expect(r.events).toEqual([]);
+  });
+});
+
 describe('POST /api/parse', () => {
   test('requires login', async () => {
     await request(app).post('/api/parse').send({ text: 'Infosys online test on 20 Nov at 10 AM' }).expect(401);

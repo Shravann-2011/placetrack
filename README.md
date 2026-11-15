@@ -14,7 +14,7 @@ A job and internship application tracker for Indian campus placements. Track eve
 
 | Problem | Feature |
 |---|---|
-| Typing in every drive by hand from the placement email | **Paste a message**: paste the email or WhatsApp text and PlaceTrack reads the company, role, CTC/stipend, links, eligibility and every dated round (rule-based, no AI API), shows what it found highlighted, and adds it after you check it. Spots companies you already track. |
+| Typing in every drive by hand from the placement email | **Paste a message**: paste the email or WhatsApp text and PlaceTrack reads the company, role, CTC/stipend, links, eligibility and every dated round (rule-based, no AI API), shows what it found highlighted, and adds it after you check it. Handles WhatsApp formatting, drive schedules, forwarded emails and postponements, fills venue and mode, and reads the stage from shortlist / offer / rejection mails (offering to move an application you already track). |
 | Deadlines are scattered across email, WhatsApp and the placement portal | **Calendar** with month, week and agenda views of every registration deadline, OA, GD, interview and offer deadline |
 | One application has many dates | **Rounds per application**: type, time, online / on-campus, venue or link, notes |
 | Two rounds at the same time | **Clash warnings** when an event overlaps another, plus ⚠ badges on the calendar |
@@ -31,7 +31,7 @@ A job and internship application tracker for Indian campus placements. Track eve
 - **Detail panel:** stage timeline and rounds for every application
 - **Design:** poster-style UI (Archivo Black headings, forest green / cream / lime / pink), animations that respect the OS reduced-motion setting, mobile bottom tab bar
 - **Security:** bcrypt password hashing, Zod validation, rate limiting, http(s)-only job links, per-user data scoping, consistent JSON errors
-- **Quality:** 85 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
+- **Quality:** 97 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
 
 ## Tech stack
 
