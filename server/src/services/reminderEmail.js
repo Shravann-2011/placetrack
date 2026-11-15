@@ -1,147 +1,182 @@
-// The reminder email. Email clients (Gmail, Outlook, Apple Mail) ignore most modern CSS, so this
-// is built the way email has to be: nested tables, inline styles, web-safe fonts, no JavaScript.
-// The <style> block only adds extras that some clients support (phone padding, dark mode tweaks).
+// The reminder email, one wording per kind of reminder: a pre-placement talk asks you to join the
+// talk, an online assessment asks you to open the test, a deadline asks you to register, and so on.
+// Only real details from the event are used (company, time, venue or link); nothing is made up.
+//
+// Email clients (Gmail, Outlook, Apple Mail) ignore most modern CSS, so this is built the way email
+// has to be: tables, inline styles, web-safe fonts. The <style> block only tunes phones.
 
 const TIME_ZONE = 'Asia/Kolkata'; // campus placements in India: times shown in IST
-const DEADLINES = ['Registration deadline', 'Offer deadline'];
-const C = { ink: '#10231a', cream: '#fbf8ee', sand: '#f1ecdc', lime: '#d4f04c', line: '#e8e2cf', muted: '#5b6b62', soft: '#8a978f' };
-
-// Accent colour, short label and one prep tip for each kind of round (matches the app's calendar colours)
-const KINDS = {
-  'Registration deadline': { color: '#e11d48', tint: '#fff1f3', label: 'Registration deadline', tip: 'Submit early. Placement portals slow down in the last hour.' },
-  'Pre-placement talk': { color: '#0d9488', tint: '#effcf9', label: 'Pre-placement talk', tip: 'Note down the role, CTC break-up and bond. They often answer questions you would ask later.' },
-  'Online assessment': { color: '#0284c7', tint: '#f0f9ff', label: 'Online assessment', tip: 'Charge your laptop, check your internet and webcam, and keep a rough sheet ready.' },
-  'Group discussion': { color: '#7c3aed', tint: '#f5f3ff', label: 'Group discussion', tip: 'Open with a clear point, give others room to speak, and sum up at the end.' },
-  'Technical interview': { color: '#d97706', tint: '#fffbeb', label: 'Technical interview', tip: 'Revise your projects end to end. Expect "why did you choose this?" for every tool you used.' },
-  'HR interview': { color: '#ea580c', tint: '#fff7ed', label: 'HR interview', tip: 'Have a 60-second introduction ready, and two questions to ask them.' },
-  'Offer deadline': { color: '#059669', tint: '#ecfdf5', label: 'Offer deadline', tip: 'Compare total CTC, bond and location on the Offers page before you accept.' },
-  Other: { color: '#475569', tint: '#f1f5f9', label: 'Event', tip: '' },
+const C = { ink: '#10231a', page: '#f3f1ea', card: '#ffffff', box: '#f8f6ef', line: '#e6e1d3', body: '#3f4a44', muted: '#77837c', lime: '#d4f04c' };
+const DOT = {
+  'Registration deadline': '#e11d48', 'Pre-placement talk': '#0d9488', 'Online assessment': '#0284c7', 'Group discussion': '#7c3aed',
+  'Technical interview': '#d97706', 'HR interview': '#ea580c', 'Offer deadline': '#059669', Other: '#64748b',
 };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (date, opts) => new Intl.DateTimeFormat('en-IN', { timeZone: TIME_ZONE, ...opts }).format(date);
 const dayKey = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(d);
-const clock = (d) => fmt(d, { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase().replace(/\s+/g, ' ');
+const clock = (d) => fmt(d, { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase().replace(/\s+/g, '\u00a0'); // "11:59 PM" never splits across lines
 const isUrl = (s) => /^https?:\/\//i.test(s || '');
+const minus = (d, mins) => new Date(+d - mins * 60e3);
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// "today" / "tomorrow" / "on Friday, 20 Nov"
-function dayWord(start, now) {
-  if (dayKey(start) === dayKey(now)) return 'today';
+// "today" / "tonight" / "tomorrow" / "on Friday, 20 Nov"
+function dayWord(start, now, { night = false } = {}) {
+  if (dayKey(start) === dayKey(now)) return night && +fmt(start, { hour: 'numeric', hour12: false }) >= 18 ? 'tonight' : 'today';
   if (dayKey(start) === dayKey(new Date(+now + 864e5))) return 'tomorrow';
   return `on ${fmt(start, { weekday: 'long', day: 'numeric', month: 'short' })}`;
 }
 
-// "in 16 minutes" / "in 3 hours" / "in 1 day"
+// "in 16 min" / "in 3 hours" / "in 1 day"
 function countdown(start, now) {
   const mins = Math.max(0, Math.round((start - now) / 60000));
-  if (mins < 60) return `in ${mins} minute${mins === 1 ? '' : 's'}`;
+  if (mins < 60) return `in ${mins} min`;
   const hours = Math.round(mins / 60);
   if (hours < 24) return `in ${hours} hour${hours === 1 ? '' : 's'}`;
   const days = Math.round(hours / 24);
   return `in ${days} day${days === 1 ? '' : 's'}`;
 }
 
+// Where the round happens, in words: the meeting platform, the venue, or just the mode
+function placeOf(event, link) {
+  if (link) {
+    const host = link.replace(/^https?:\/\//i, '').split(/[/?#]/)[0].replace(/^www\./, '');
+    const known = [[/meet\.google/, 'Google Meet'], [/zoom\.us/, 'Zoom'], [/teams\.(microsoft|live)/, 'Microsoft Teams'], [/hackerrank/, 'HackerRank'], [/hackerearth/, 'HackerEarth'], [/mettl/, 'Mercer Mettl'], [/webex/, 'Webex']];
+    return (known.find(([re]) => re.test(host)) || [null, host])[1];
+  }
+  return event.location || event.mode || null;
+}
+
+// The words and the main button for each kind of reminder
+function copyFor(event, ctx) {
+  const { company, at, when, link, venue, appUrl, jobLink } = ctx;
+  const timed = !event.allDay;
+  const start = new Date(event.start);
+  const view = { label: 'View in PlaceTrack', href: `${appUrl}/calendar` };
+  const join = (label) => (link ? { label, href: link } : view);
+  const logistics = (earlyMins, word) => (link
+    ? `It's online. Join from the link below a few minutes before ${timed ? clock(start) : 'it starts'}.`
+    : venue
+      ? `It's at ${venue}.${timed ? ` Try to be there by ${clock(minus(start, earlyMins))}.` : ''}`
+      : `The ${word} link or venue usually comes from the placement cell or the company before it starts.`);
+
+  switch (event.type) {
+    case 'Pre-placement talk':
+      return {
+        subject: `Pre-placement talk: ${company}, ${when}${at}`,
+        headline: `Join the ${company} pre-placement talk ${when}${at}`,
+        body: logistics(10, 'joining'),
+        button: join('Join the talk'),
+      };
+    case 'Online assessment':
+      return {
+        subject: `Online assessment: ${company}, ${when}${at}`,
+        headline: `Take the ${company} online assessment ${when}${at}`,
+        body: link
+          ? 'Open the test from the link below. Use a laptop on a steady connection, with your webcam working.'
+          : 'The test link usually arrives by email from the company or the test platform shortly before it starts. Use a laptop on a steady connection.',
+        button: join('Open the test'),
+      };
+    case 'Group discussion':
+      return {
+        subject: `Group discussion: ${company}, ${when}${at}`,
+        headline: `Group discussion with ${company} ${when}${at}`,
+        body: logistics(15, 'meeting'),
+        button: join('Join the discussion'),
+      };
+    case 'Technical interview':
+      return {
+        subject: `Technical interview: ${company}, ${when}${at}`,
+        headline: `Your technical interview with ${company} is ${when}${at}`,
+        body: `${logistics(15, 'meeting')} Keep your resume open; they will ask about the projects on it.`,
+        button: join('Join the interview'),
+      };
+    case 'HR interview':
+      return {
+        subject: `HR interview: ${company}, ${when}${at}`,
+        headline: `Your HR interview with ${company} is ${when}${at}`,
+        body: logistics(15, 'meeting'),
+        button: join('Join the interview'),
+      };
+    case 'Registration deadline':
+      return {
+        subject: `${company} registration closes ${when}${at}`,
+        headline: `Register for ${company} before ${timed ? clock(start) : 'the end of the day'} ${when}`,
+        body: 'If you haven\'t registered yet, do it now. If you already have, you can ignore this email.',
+        button: jobLink ? { label: 'Open the registration form', href: jobLink } : view,
+      };
+    case 'Offer deadline':
+      return {
+        subject: `Reply to your ${company} offer by ${timed ? `${clock(start)} ` : ''}${when.replace(/^on /, '')}`,
+        headline: `Reply to your ${company} offer by ${timed ? `${clock(start)} ` : ''}${when.replace(/^on /, '')}`,
+        body: 'Accept or decline it on the company\'s portal or by email, as their offer letter says. Compare it with your other offers first.',
+        button: { label: 'Compare my offers', href: `${appUrl}/offers` },
+      };
+    default: {
+      const name = event.title || 'Event';
+      return {
+        subject: `${name}: ${company}, ${when}${at}`,
+        headline: `${name === 'Event' ? `${company} event` : `${name} with ${company}`} ${when}${at}`,
+        body: link ? 'Join from the link below.' : venue ? `It's at ${venue}.` : '',
+        button: join('Join the meeting'),
+      };
+    }
+  }
+}
+
 // Same link format as the app's "Add to Google Calendar" button
 function googleCalendarUrl(event, title) {
   const ics = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
   const start = new Date(event.start);
-  const end = event.allDay ? new Date(+start + 864e5) : new Date(Math.max(+new Date(event.end || start), +start + 30 * 60e3));
-  const dates = event.allDay ? `${dayKey(start).replace(/-/g, '')}/${dayKey(end).replace(/-/g, '')}` : `${ics(start)}/${ics(end)}`;
-  const params = new URLSearchParams({
-    action: 'TEMPLATE', text: title, dates,
-    details: [event.application?.role && `Role: ${event.application.role}`, event.mode && `Mode: ${event.mode}`, 'Added from PlaceTrack'].filter(Boolean).join('\n'),
-    location: event.location || '',
-  });
+  const end = new Date(Math.max(+new Date(event.end || start), +start + 30 * 60e3));
+  const dates = event.allDay ? `${dayKey(start).replace(/-/g, '')}/${dayKey(new Date(+start + 864e5)).replace(/-/g, '')}` : `${ics(start)}/${ics(end)}`;
+  const params = new URLSearchParams({ action: 'TEMPLATE', text: title, dates, details: 'Added from PlaceTrack', location: event.location || '' });
   return `https://calendar.google.com/calendar/render?${params}`;
 }
 
-function button(href, label, primary) {
-  const bg = primary ? C.ink : '#ffffff';
-  const fg = primary ? C.lime : C.ink;
-  const border = primary ? C.ink : C.line;
-  // inline-block links in one cell wrap onto a new line on narrow phones instead of overflowing
-  return `<a href="${esc(href)}" target="_blank" style="display:inline-block;margin:0 6px 8px 0;background:${bg};color:${fg};border:1px solid ${border};border-radius:10px;padding:12px 18px;font-weight:700;font-size:14px;line-height:1;text-decoration:none;white-space:nowrap">${esc(label)}</a>`;
+function fact(label, value, sub) {
+  return `<div class="fact" style="display:inline-block;vertical-align:top;width:31%;min-width:150px;margin:0 0 4px;padding:14px 0 0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${C.muted}">${esc(label)}</div>
+          <div style="margin-top:4px;font-size:16px;font-weight:700;line-height:1.3;color:${C.ink}">${esc(value)}</div>
+          ${sub ? `<div style="margin-top:2px;font-size:13px;color:${C.muted}">${esc(sub)}</div>` : ''}
+        </div>`;
 }
 
 function buildReminder(event, user, now = new Date()) {
   const appUrl = process.env.CLIENT_URL || 'https://placetrack-five.vercel.app';
-  const kind = KINDS[event.type] || KINDS.Other;
-  const isDeadline = DEADLINES.includes(event.type);
-  const company = event.application?.company || 'Your application';
-  const role = event.application?.role;
-  const what = event.title || kind.label; // "Other" with no title reads as "Event"
+  const isDeadline = ['Registration deadline', 'Offer deadline'].includes(event.type);
+  const company = event.application?.company || 'your application';
   const start = new Date(event.start);
   const end = event.end ? new Date(event.end) : start;
+  const timed = !event.allDay;
+  const link = isUrl(event.location) ? event.location : null;
+  const venue = !link && event.location ? event.location : null;
+  const jobLink = isUrl(event.application?.jobLink) ? event.application.jobLink : null;
   const firstName = (user.name || '').trim().split(/\s+/)[0] || 'there';
+  const kindLabel = event.type === 'Other' ? (event.title || 'Event') : event.type;
 
-  const day = dayWord(start, now);
-  const time = event.allDay ? 'All day' : isDeadline || +end <= +start ? clock(start) : `${clock(start)} – ${clock(end)}`;
-  const soon = countdown(start, now);
-  const headline = isDeadline
-    ? `${what} closes ${day}${event.allDay ? '' : ` at ${clock(start)}`}`
-    : `${what} ${day}${event.allDay ? '' : ` at ${clock(start)}`}`;
-  const subject = `⏰ ${company} · ${headline}`;
+  const when = dayWord(start, now, { night: isDeadline });
+  const at = timed ? ` at ${clock(start)}` : '';
+  const copy = copyFor(event, { company, at, when, link, venue, appUrl, jobLink });
 
-  const list = event.checklist || [];
-  const doneCount = list.filter((c) => c.done).length;
-  const pct = list.length ? Math.round((doneCount / list.length) * 100) : 0;
-  const joinUrl = isUrl(event.location) ? event.location : null;
-  const place = !isDeadline && event.location && !joinUrl ? event.location : null;
-  const calendarUrl = `${appUrl}/calendar`;
-  const settingsUrl = `${appUrl}/settings`;
+  // The three facts: day, time, place (deadlines: day, time, and what is due)
+  const timeValue = !timed ? 'All day' : isDeadline || +end <= +start ? clock(start) : `${clock(start)} – ${clock(end)}`;
+  const hasEnd = timed && !isDeadline && +end > +start;
+  const place = placeOf(event, link);
+  const facts = [
+    fact('Date', fmt(start, { weekday: 'long', day: 'numeric', month: 'short' })),
+    fact(isDeadline ? 'Closes at' : 'Time', timed ? clock(start) : 'All day', timed ? (hasEnd ? `until ${clock(end)} IST` : 'IST') : ''),
+    isDeadline
+      ? fact('Role', event.application?.role || '—')
+      : fact(link ? 'Join on' : 'Where', place || 'To be shared'),
+  ].join('');
 
-  // Short line shown next to the subject in the inbox list
-  const preheader = [time === 'All day' ? `${day[0].toUpperCase()}${day.slice(1)}, all day` : `${time} IST`, !isDeadline && event.mode, list.length && `${doneCount} of ${list.length} prep items done`].filter(Boolean).join(' · ');
+  const secondary = [
+    !isDeadline && `<a href="${esc(googleCalendarUrl(event, `${company}: ${kindLabel}`))}" style="color:${C.ink};text-decoration:underline">Add to Google Calendar</a>`,
+    copy.button.href !== `${appUrl}/calendar` && `<a href="${esc(`${appUrl}/calendar`)}" style="color:${C.ink};text-decoration:underline">View in PlaceTrack</a>`,
+  ].filter(Boolean).join(`<span style="color:${C.line}">&nbsp;&nbsp;|&nbsp;&nbsp;</span>`);
 
-  const details = [
-    ['When', `${fmt(start, { weekday: 'long', day: 'numeric', month: 'long' })}${event.allDay ? '' : `, ${time} IST`}`],
-    role && ['Role', role],
-    !isDeadline && event.mode && ['Mode', event.mode],
-    place && ['Where', place],
-    joinUrl && ['Link', `<a href="${esc(joinUrl)}" style="color:${C.ink};text-decoration:underline">${esc(joinUrl.replace(/^https?:\/\//, '').slice(0, 48))}</a>`, true],
-  ].filter(Boolean);
-
-  const detailRows = details.map(([k, v, raw], i) => `
-              <tr>
-                <td style="padding:12px 0;${i ? `border-top:1px solid ${C.line};` : ''}color:${C.soft};font-size:13px;width:84px;vertical-align:top">${esc(k)}</td>
-                <td style="padding:12px 0;${i ? `border-top:1px solid ${C.line};` : ''}color:${C.ink};font-size:14px;font-weight:600;vertical-align:top">${raw ? v : esc(v)}</td>
-              </tr>`).join('');
-
-  const checklist = list.length ? `
-          <tr><td style="padding:8px 32px 0" class="px">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.cream};border:1px solid ${C.line};border-radius:14px">
-              <tr><td style="padding:18px 20px">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-                  <td style="font-size:14px;font-weight:700;color:${C.ink}">Your prep</td>
-                  <td align="right" style="font-size:13px;color:${C.muted}">${doneCount} of ${list.length} done</td>
-                </tr></table>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0 6px;border-radius:99px;overflow:hidden;background:${C.line}"><tr>
-                  ${pct > 0 ? `<td width="${pct}%" style="height:8px;background:${C.ink};font-size:0;line-height:0">&nbsp;</td>` : ''}
-                  ${pct < 100 ? `<td style="height:8px;font-size:0;line-height:0">&nbsp;</td>` : ''}
-                </tr></table>
-                ${list.slice(0, 8).map((c) => `
-                <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>
-                  <td style="width:22px;vertical-align:top;padding-top:1px"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid ${c.done ? C.ink : C.soft};background:${c.done ? C.ink : '#ffffff'};color:${C.lime};font-size:11px;line-height:14px;text-align:center;font-weight:900">${c.done ? '&#10003;' : '&nbsp;'}</span></td>
-                  <td style="font-size:14px;line-height:1.45;color:${c.done ? C.soft : C.ink};${c.done ? 'text-decoration:line-through;' : ''}">${esc(c.text)}</td>
-                </tr></table>`).join('')}
-                ${list.length > 8 ? `<p style="margin:8px 0 0;font-size:13px;color:${C.muted}">+ ${list.length - 8} more in PlaceTrack</p>` : ''}
-                ${doneCount === list.length ? `<p style="margin:10px 0 0;font-size:14px;font-weight:700;color:${C.ink}">All done. You're ready.</p>` : ''}
-              </td></tr>
-            </table>
-          </td></tr>` : '';
-
-  const tip = kind.tip ? `
-          <tr><td style="padding:16px 32px 0" class="px">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid ${kind.color};background:${kind.tint};border-radius:0 10px 10px 0">
-              <tr><td style="padding:12px 16px;font-size:13px;line-height:1.5;color:${C.ink}"><b>Quick tip:</b> ${esc(kind.tip)}</td></tr>
-            </table>
-          </td></tr>` : '';
-
-  const buttons = [
-    joinUrl && button(joinUrl, 'Join meeting', true),
-    button(calendarUrl, 'Open in PlaceTrack', !joinUrl),
-    !isDeadline && button(googleCalendarUrl(event, `${company}: ${what}`), 'Add to Google Calendar', false),
-  ].filter(Boolean).join('');
+  const preheader = `${cap(when.replace(/^on /, ''))}${at}${place && !isDeadline ? `, ${place}` : ''}`;
 
   const html = `<!doctype html>
 <html lang="en">
@@ -150,72 +185,60 @@ function buildReminder(event, user, now = new Date()) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light only">
-<title>${esc(subject)}</title>
+<title>${esc(copy.subject)}</title>
 <style>
   @media (max-width: 600px) {
-    .px { padding-left: 20px !important; padding-right: 20px !important; }
-    .h1 { font-size: 24px !important; }
-    .tile { display: none !important; }
+    .pad { padding-left: 22px !important; padding-right: 22px !important; }
+    .h1 { font-size: 23px !important; }
+    .fact { width: 100% !important; }
+    .btn { display: block !important; text-align: center !important; }
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:${C.sand};-webkit-text-size-adjust:100%">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(preheader)}&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.sand}">
-  <tr><td align="center" style="padding:28px 12px">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
-
-      <!-- Brand -->
-      <tr><td style="padding:0 4px 14px">
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td style="width:28px;height:28px;background:${C.ink};border-radius:8px;text-align:center;vertical-align:middle;color:${C.lime};font-weight:900;font-size:15px;line-height:28px">P</td>
-          <td style="padding-left:10px;font-weight:900;font-size:15px;letter-spacing:1.5px;color:${C.ink}">PLACETRACK</td>
-        </tr></table>
-      </td></tr>
-
-      <!-- Card -->
-      <tr><td style="background:#ffffff;border:1px solid ${C.line};border-radius:20px;overflow:hidden">
+<body style="margin:0;padding:0;background:${C.page};-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${esc(preheader)}&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;&nbsp;&#8199;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page}">
+  <tr><td align="center" style="padding:32px 12px 40px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
+      <tr><td style="background:${C.card};border:1px solid ${C.line};border-radius:14px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="height:6px;background:${kind.color};font-size:0;line-height:0">&nbsp;</td></tr>
 
-          <!-- Headline -->
-          <tr><td style="padding:28px 32px 8px" class="px">
+          <tr><td class="pad" style="padding:26px 36px 0">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-              <td style="vertical-align:top">
-                <span style="display:inline-block;background:${kind.tint};color:${kind.color};border-radius:99px;padding:5px 11px;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase">${esc(kind.label)} &middot; ${esc(soon)}</span>
-                <p style="margin:16px 0 4px;font-size:14px;color:${C.muted}">Hi ${esc(firstName)}, a reminder for</p>
-                <h1 class="h1" style="margin:0;font-size:28px;line-height:1.2;font-weight:800;color:${C.ink}">${esc(company)}</h1>
-                <p style="margin:6px 0 0;font-size:17px;line-height:1.4;color:${C.ink}">${esc(headline[0].toUpperCase() + headline.slice(1))}</p>
+              <td style="font-size:14px;font-weight:800;letter-spacing:.2px;color:${C.ink}">
+                <span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:${C.ink};color:${C.lime};font-size:11px;line-height:18px;text-align:center;vertical-align:-3px;margin-right:7px">P</span>PlaceTrack
               </td>
-              <td class="tile" style="width:76px;vertical-align:top;padding-left:16px">
-                <table role="presentation" cellpadding="0" cellspacing="0" style="width:76px;border:1px solid ${C.line};border-radius:14px;overflow:hidden;text-align:center">
-                  <tr><td style="background:${C.ink};color:${C.lime};font-size:11px;font-weight:800;letter-spacing:1px;padding:5px 0">${esc(fmt(start, { month: 'short' }).toUpperCase())}</td></tr>
-                  <tr><td style="font-size:30px;font-weight:800;color:${C.ink};padding:6px 0 0;line-height:1">${esc(fmt(start, { day: 'numeric' }))}</td></tr>
-                  <tr><td style="font-size:11px;color:${C.muted};padding:2px 0 8px">${esc(fmt(start, { weekday: 'short' }))}</td></tr>
-                </table>
+              <td align="right" style="font-size:12px;color:${C.muted};white-space:nowrap">
+                <span style="display:inline-block;width:7px;height:7px;border-radius:7px;background:${DOT[event.type] || DOT.Other};margin-right:6px;vertical-align:1px"></span>${esc(kindLabel)}
               </td>
             </tr></table>
           </td></tr>
 
-          <!-- Details -->
-          <tr><td style="padding:12px 32px 4px" class="px">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${detailRows}
-            </table>
+          <tr><td class="pad" style="padding:30px 36px 0">
+            <p style="margin:0 0 10px;font-size:14px;color:${C.muted}">Hi ${esc(firstName)}, ${isDeadline ? 'closing' : 'starting'} ${esc(countdown(start, now))}${event.application?.role && !isDeadline ? ` &middot; ${esc(event.application.role)}` : ''}</p>
+            <h1 class="h1" style="margin:0;font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-.3px;color:${C.ink}">${esc(copy.headline)}</h1>
+            ${copy.body ? `<p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:${C.body}">${esc(copy.body)}</p>` : ''}
           </td></tr>
-${checklist}
-${tip}
-          <!-- Actions -->
-          <tr><td style="padding:24px 32px 20px" class="px">
-            ${buttons}
+
+          <tr><td class="pad" style="padding:24px 36px 0">
+            <div style="border-top:1px solid ${C.line};border-bottom:1px solid ${C.line};padding:4px 0 16px">
+        ${facts}
+            </div>
+          </td></tr>
+
+          <tr><td class="pad" style="padding:26px 36px 0">
+            <a class="btn" href="${esc(copy.button.href)}" target="_blank" style="display:inline-block;background:${C.ink};color:#ffffff;border-radius:8px;padding:14px 24px;font-size:15px;font-weight:700;line-height:1;text-decoration:none">${esc(copy.button.label)}</a>
+          </td></tr>
+
+          <tr><td class="pad" style="padding:18px 36px 30px;font-size:13px;line-height:1.6;color:${C.muted}">
+            ${secondary}
           </td></tr>
         </table>
       </td></tr>
 
-      <!-- Footer -->
-      <tr><td style="padding:20px 8px 0;text-align:center;font-size:12px;line-height:1.6;color:${C.muted}">
-        You get one email per round or deadline, about a day before it.<br>
-        <a href="${esc(settingsUrl)}" style="color:${C.muted};text-decoration:underline">Turn off reminder emails</a> &nbsp;&middot;&nbsp; <a href="${esc(calendarUrl)}" style="color:${C.muted};text-decoration:underline">Your calendar</a>
-        <p style="margin:12px 0 0;color:${C.soft}">PlaceTrack &middot; your campus placement tracker</p>
+      <tr><td style="padding:20px 12px 0;text-align:center;font-size:12px;line-height:1.7;color:${C.muted}">
+        PlaceTrack sends one reminder for each round on your calendar, about a day before.<br>
+        <a href="${esc(`${appUrl}/settings`)}" style="color:${C.muted};text-decoration:underline">Turn off reminder emails</a>
       </td></tr>
     </table>
   </td></tr>
@@ -226,17 +249,20 @@ ${tip}
   const text = [
     `Hi ${firstName},`,
     '',
-    `${company}: ${headline} (${soon}).`,
+    `${copy.headline}.`,
+    copy.body,
     '',
-    ...details.map(([k, v, raw]) => `${k}: ${raw ? joinUrl : v}`),
-    list.length ? `\nYour prep: ${doneCount} of ${list.length} done\n${list.map((c) => `${c.done ? '[x]' : '[ ]'} ${c.text}`).join('\n')}` : '',
-    kind.tip ? `\nQuick tip: ${kind.tip}` : '',
+    `Date: ${fmt(start, { weekday: 'long', day: 'numeric', month: 'short' })}`,
+    `${isDeadline ? 'Closes at' : 'Time'}: ${timeValue}${timed ? ' IST' : ''}`,
+    !isDeadline && place ? `${link ? 'Join on' : 'Where'}: ${place}` : '',
     '',
-    `Open in PlaceTrack: ${calendarUrl}`,
-    `Turn off reminder emails: ${settingsUrl}`,
-  ].join('\n');
+    `${copy.button.label}: ${copy.button.href}`,
+    '',
+    `Turn off reminder emails: ${appUrl}/settings`,
+  ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n');
 
-  return { subject, html, text, preheader };
+  const plain = (t) => t.replace(/\u00a0/g, ' ');
+  return { subject: plain(copy.subject), html, text: plain(text), preheader: plain(preheader) };
 }
 
 module.exports = { buildReminder };

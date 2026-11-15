@@ -18,7 +18,7 @@ A job and internship application tracker for Indian campus placements. Track eve
 | Deadlines are scattered across email, WhatsApp and the placement portal | **Calendar** with month, week and agenda views of every registration deadline, OA, GD, interview and offer deadline |
 | One application has many dates | **Rounds per application**: type, time, online / on-campus, venue or link, notes |
 | Two rounds at the same time | **Clash warnings** when an event overlaps another, plus ⚠ badges on the calendar |
-| No reminders | **Reminder emails**: one email about a day before each round or deadline (with time, venue/link and prep-checklist progress), switchable in Settings. Plus **Add to Google Calendar** and **.ics export** with a 1-hour alert |
+| No reminders | **Reminder emails**: one email about a day before each round or deadline, worded for that round (join the talk, open the test, register, reply to the offer) with the time, venue or meeting link, switchable in Settings. Plus **Add to Google Calendar** and **.ics export** with a 1-hour alert |
 | Scattered preparation | **Prep checklist per round** with suggestions for each round type, an "x/y ready" badge, and a "what was asked" note for afterwards |
 | Applications go quiet and are forgotten | **"Gone quiet" nudge**: active applications with no update in 14+ days (and no round booked), with *Followed up* / *Mark rejected* actions |
 | Comparing offers is confusing | **Offers page**: total CTC, fixed and variable pay, joining bonus, bond, location, joining date and accept-by countdown side by side, best values highlighted |
@@ -31,7 +31,7 @@ A job and internship application tracker for Indian campus placements. Track eve
 - **Detail panel:** stage timeline and rounds for every application
 - **Design:** poster-style UI (Archivo Black headings, forest green / cream / lime / pink), animations that respect the OS reduced-motion setting, mobile bottom tab bar
 - **Security:** bcrypt password hashing, Zod validation, rate limiting, http(s)-only job links, per-user data scoping, consistent JSON errors
-- **Quality:** 98 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
+- **Quality:** 99 API tests (95% statement coverage), Swagger docs, GitHub Actions CI, keep-alive job for the free-tier API
 
 ## Tech stack
 

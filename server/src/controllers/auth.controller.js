@@ -87,11 +87,8 @@ async function sendTestEmail(req, res) {
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const sample = {
     type: 'Online assessment', start, end: new Date(+start + 90 * 60 * 1000), allDay: false, mode: 'Online',
+    location: 'https://www.hackerrank.com/',
     application: { company: 'Sample Company', role: 'Software Engineer' },
-    checklist: [
-      { text: 'Revise DBMS joins', done: true }, { text: 'Practise 2 DP problems', done: true },
-      { text: 'Test webcam and mic', done: false }, { text: 'Keep college ID ready', done: false },
-    ],
   };
   const mail = buildReminder(sample, req.user);
   await sendMail({ to: req.user.email, toName: req.user.name, ...mail, subject: `[Test] ${mail.subject}` });

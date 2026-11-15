@@ -18,7 +18,7 @@ async function runDueReminders(now = new Date()) {
     done: false,
     remindedAt: null,
     start: { $gt: now, $lte: new Date(now.getTime() + WINDOW) },
-  }).populate('application', 'company role stage').limit(200).lean();
+  }).populate('application', 'company role stage jobLink').limit(200).lean();
   summary.checked = due.length;
   if (!due.length) return summary;
 

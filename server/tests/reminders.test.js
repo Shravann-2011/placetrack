@@ -43,9 +43,9 @@ describe('Reminder emails', () => {
     expect(sent[0].headers['api-key']).toBe('test-key');
     expect(sent[0].body.sender).toEqual({ name: 'PlaceTrack', email: 'alerts@example.com' });
     expect(sent[0].body.to[0].email).toBe(u.user.email);
-    expect(sent[0].body.subject).toMatch(/^⏰ TCS · Online assessment (today|tomorrow) at /);
-    expect(sent[0].body.htmlContent).toContain('1 of 2 done');
-    expect(sent[0].body.htmlContent).toContain('Mock test');
+    expect(sent[0].body.subject).toMatch(/^Online assessment: TCS, (today|tomorrow) at /);
+    expect(sent[0].body.htmlContent).toContain('Take the TCS online assessment');
+    expect(sent[0].body.htmlContent).not.toContain('Mock test'); // no prep checklist in the email
 
     const second = await runDueReminders();
     expect(second.sent).toBe(0);
@@ -102,8 +102,8 @@ describe('Reminder emails', () => {
     const now = new Date('2026-11-15T06:00:00Z'); // 11:30 AM IST
     const event = { type: 'Registration deadline', start: new Date('2026-11-16T18:29:00Z'), allDay: false, application: { company: '<b>Acme</b>' }, checklist: [] };
     const mail = buildReminder(event, { name: 'Asha Rao' }, now);
-    expect(mail.subject).toBe('⏰ <b>Acme</b> · Registration deadline closes tomorrow at 11:59 PM');
-    expect(mail.preheader).toBe('11:59 PM IST');
+    expect(mail.subject).toBe('<b>Acme</b> registration closes tomorrow at 11:59 PM');
+    expect(mail.preheader).toBe('Tomorrow at 11:59 PM');
     expect(mail.html).not.toContain('Add to Google Calendar'); // deadlines don't get a calendar slot
     expect(mail.html).toContain('&lt;b&gt;Acme&lt;/b&gt;');
     expect(mail.html).not.toContain('<b>Acme</b>');
@@ -116,11 +116,40 @@ describe('Reminder emails', () => {
       type: 'Other', start: new Date('2026-11-15T06:16:00Z'), end: new Date('2026-11-15T07:16:00Z'), mode: 'Online',
       location: 'https://meet.google.com/abc-defg-hij', application: { company: 'Computacenter', role: 'SDE' }, checklist: [],
     }, { name: 'Shravan Kumar' }, now);
-    expect(mail.subject).toBe('⏰ Computacenter · Event today at 11:46 AM');
-    expect(mail.html).toContain('in 16 minutes');
-    expect(mail.html).toContain('Join meeting');
+    expect(mail.subject).toBe('Event: Computacenter, today at 11:46 AM');
+    expect(mail.html).toContain('starting in 16 min');
+    expect(mail.html).toContain('Join the meeting');
+    expect(mail.html).toContain('Google Meet');
     expect(mail.html).toContain('calendar.google.com/calendar/render');
     expect(mail.html).not.toMatch(/>Other</);
+  });
+
+  test('each kind of reminder has its own wording and button', () => {
+    const now = new Date('2026-11-15T06:00:00Z'); // 11:30 AM IST
+    const base = { start: new Date('2026-11-16T04:30:00Z'), end: new Date('2026-11-16T05:30:00Z'), application: { company: 'Infosys', role: 'SE', jobLink: 'https://forms.gle/abc' } };
+    const mail = (type, extra = {}) => buildReminder({ ...base, type, ...extra }, { name: 'Asha' }, now);
+
+    const ppt = mail('Pre-placement talk', { location: 'https://zoom.us/j/123' });
+    expect(ppt.subject).toBe('Pre-placement talk: Infosys, tomorrow at 10:00 AM');
+    expect(ppt.html).toContain('Join the Infosys pre-placement talk tomorrow at 10:00');
+    expect(ppt.html).toContain('>Join the talk<');
+    expect(ppt.html).toContain('Zoom');
+
+    const oa = mail('Online assessment', { location: 'https://www.hackerrank.com/test/x' });
+    expect(oa.html).toContain('>Open the test<');
+    expect(oa.html).toContain('HackerRank');
+
+    const gd = mail('Group discussion', { location: 'Seminar Hall 2' });
+    expect(gd.html).toContain('Try to be there by 9:45');
+    expect(gd.html).toContain('>View in PlaceTrack<'); // no link to join, so the button opens the calendar
+
+    const reg = mail('Registration deadline');
+    expect(reg.html).toContain('>Open the registration form<');
+    expect(reg.html).toContain('https://forms.gle/abc');
+
+    const offer = mail('Offer deadline');
+    expect(offer.subject).toBe('Reply to your Infosys offer by 10:00 AM tomorrow');
+    expect(offer.html).toContain('>Compare my offers<');
   });
 
   test('sender parsing', () => {
