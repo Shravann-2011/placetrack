@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { Icon } from '../components/Icon';
 import { EmptyState, Spinner } from '../components/ui';
 import { EventFormModal } from '../components/EventForm';
+import { ExplainedButton } from '../components/Explainers';
 import { PasteModal } from '../components/PasteModal';
 
 const VIEWS = [
@@ -174,7 +175,7 @@ export default function CalendarPage() {
           <button className="btn-secondary" onClick={exportIcs} title="Download an .ics file for Google, Apple or Outlook Calendar">
             <Icon name="download" /> <span className="hidden sm:inline">Export to calendar app</span><span className="sm:hidden">Export</span>
           </button>
-          <button className="btn-lime" onClick={() => setPasting(true)}><Icon name="sparkles" /> <span className="hidden sm:inline">Paste a message</span><span className="sm:hidden">Paste</span></button>
+          <ExplainedButton kind="paste" className="btn-lime" onClick={() => setPasting(true)}><Icon name="paste" /> <span className="hidden sm:inline">Paste a message</span><span className="sm:hidden">Paste</span></ExplainedButton>
           <button className="btn-primary" onClick={() => openAdd()}><Icon name="plus" /> <span className="hidden sm:inline">Add event</span><span className="sm:hidden">Add</span></button>
         </div>
       </div>

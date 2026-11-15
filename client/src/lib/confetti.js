@@ -1,6 +1,6 @@
 // A small, dependency-free confetti burst on a temporary <canvas>.
 // Skipped entirely when the user prefers reduced motion.
-const COLORS = ['#4f46e5', '#8b5cf6', '#10b981', '#f59e0b', '#0ea5e9', '#f43f5e'];
+const COLORS = ['#d4f04c', '#f6c8dc', '#f8846c', '#10231a', '#ffffff', '#bfdc2f']; // PlaceTrack lime, pink, coral, ink
 
 export function celebrate() {
   if (typeof window === 'undefined') return;

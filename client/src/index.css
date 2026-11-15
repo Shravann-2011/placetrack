@@ -43,8 +43,8 @@
   @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold
     transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60;
 }
-@utility btn-primary { @apply btn bg-ink text-lime shadow-sm hover:bg-brand-600; }
-@utility btn-lime { @apply btn bg-lime text-ink shadow-sm ring-1 ring-ink/10 hover:bg-lime-dark; }
+@utility btn-primary { @apply btn bg-ink text-lime shadow-sm hover:-translate-y-px hover:bg-brand-600 hover:shadow-md; }
+@utility btn-lime { @apply btn bg-lime text-ink shadow-sm ring-1 ring-ink/10 hover:-translate-y-px hover:bg-lime-dark hover:shadow-md; }
 @utility sticker { @apply inline-flex w-fit items-center gap-2 whitespace-nowrap bg-pink px-5 py-2.5 font-display text-sm uppercase tracking-wide text-ink shadow-[3px_3px_0_0_var(--color-ink)] transition hover:-rotate-1 hover:shadow-[5px_5px_0_0_var(--color-ink)] active:translate-x-px active:translate-y-px; }
 @utility display { font-family: var(--font-display); text-transform: uppercase; letter-spacing: -0.01em; line-height: 0.95; }
 @utility btn-secondary { @apply btn border border-slate-300 bg-white text-slate-700 shadow-xs hover:bg-slate-50; }
@@ -63,4 +63,7 @@
 /* Slowly sliding gradient on the hero headline */
 @keyframes gradient-pan { from { background-position: 0% center } to { background-position: 200% center } }
 .animate-gradient { animation: gradient-pan 6s linear infinite }
-@media (prefers-reduced-motion: reduce) { .animate-gradient { animation: none } }
+/* Empty-state icons drift gently so an empty page doesn't feel broken */
+@keyframes float { 0%, 100% { transform: translateY(0) rotate(0) } 50% { transform: translateY(-5px) rotate(-3deg) } }
+.animate-float { animation: float 3.2s ease-in-out infinite }
+@media (prefers-reduced-motion: reduce) { .animate-gradient, .animate-float { animation: none } }

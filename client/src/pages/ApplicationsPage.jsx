@@ -10,6 +10,7 @@ import { CompanyAvatar, ConfirmDialog, EmptyState, Pagination } from '../compone
 import { StageSelect } from '../components/StageSelect';
 import { ApplicationFormModal } from '../components/ApplicationForm';
 import { ApplicationDrawer } from '../components/ApplicationDrawer';
+import { ExplainedButton } from '../components/Explainers';
 import { PasteModal } from '../components/PasteModal';
 import { celebrate } from '../lib/confetti';
 import { motion } from 'motion/react';
@@ -171,12 +172,12 @@ export default function ApplicationsPage() {
             {total === undefined ? 'Loading…' : filtersActive ? `${total} matching application${total === 1 ? '' : 's'}` : `${total} application${total === 1 ? '' : 's'} tracked`}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-        <button className="btn-lime" onClick={() => setPasting(true)}><Icon name="sparkles" /> <span className="hidden sm:inline">Paste a message</span><span className="sm:hidden">Paste</span></button>
-        <button className="btn-primary" onClick={() => setEditing({})} title="Shortcut: N">
+        <div className="flex flex-wrap gap-3">
+        <ExplainedButton kind="paste" className="btn-lime" onClick={() => setPasting(true)}><Icon name="paste" /> <span className="hidden sm:inline">Paste a message</span><span className="sm:hidden">Paste</span></ExplainedButton>
+        <ExplainedButton kind="add" className="btn-primary" onClick={() => setEditing({})}>
           <Icon name="plus" /> Add application
           <kbd className="ml-1 hidden rounded bg-white/20 px-1.5 py-0.5 font-sans text-[11px] font-medium sm:inline">N</kbd>
-        </button>
+        </ExplainedButton>
         </div>
       </div>
 
@@ -258,8 +259,8 @@ export default function ApplicationsPage() {
 
             {/* Mobile cards */}
             <ul className="divide-y divide-slate-100 md:hidden">
-              {apps.map((app) => (
-                <li key={app._id} className="p-4">
+              {apps.map((app, i) => (
+                <motion.li key={app._id} className="p-4" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 10) * 0.035 }}>
                   <div className="flex items-start gap-3">
                     <CompanyAvatar name={app.company} />
                     <div className="min-w-0 flex-1">
@@ -273,7 +274,7 @@ export default function ApplicationsPage() {
                     <span className="tabular-nums">{formatCtc(app.ctc, app.type)}</span>
                     {app.dueDate && <span className="flex items-center gap-1"><Icon name="calendar" className="size-3.5" />{describeDue(app.dueDate).text}</span>}
                   </div>
-                </li>
+                </motion.li>
               ))}
             </ul>
 

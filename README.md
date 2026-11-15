@@ -23,6 +23,8 @@ A job and internship application tracker for Indian campus placements. Track eve
 | Applications go quiet and are forgotten | **"Gone quiet" nudge**: active applications with no update in 14+ days (and no round booked), with *Followed up* / *Mark rejected* actions |
 | Comparing offers is confusing | **Offers page**: total CTC, fixed and variable pay, joining bonus, bond, location, joining date and accept-by countdown side by side, best values highlighted |
 | Lost in 40 applications | Search, filters, sorting, pagination, a **Kanban board** (drag and drop, or a "Move to" menu on touch screens) and a **Due Soon** view |
+| Hard to stay motivated through a long season | **Gamified board**: XP for every round you clear, levels, a daily streak and badges, with "+XP" feedback as cards move forward |
+| New users don't know where to start | **Explainers**: a "?" on each add button with a short animation of what it does, and a welcome guide on first visit |
 | Not sure what is working | **Dashboard**: stage funnel, applications per week, response rate by source |
 
 **Also**

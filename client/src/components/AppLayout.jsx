@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { Icon, Logo } from './Icon';
@@ -72,6 +72,16 @@ function UserCard() {
   );
 }
 
+// Reopens the welcome guide that explains Paste a message / Add application
+function HowItWorks({ onNavigate }) {
+  return (
+    <Link to="/dashboard?guide=1" onClick={onNavigate}
+      className="mb-3 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-cream/70 transition hover:bg-white/5 hover:text-cream">
+      <Icon name="help" className="size-[18px]" /> How PlaceTrack works
+    </Link>
+  );
+}
+
 function ShortcutHint() {
   return (
     <div className="mb-3 rounded-2xl border border-dashed border-white/15 p-3 text-xs text-cream/60">
@@ -118,6 +128,7 @@ export function AppLayout() {
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-ink p-4 lg:flex">
         <Logo onDark className="px-2 py-1.5" />
         <div className="mt-8 flex-1"><SideNav totals={totals} layoutKey="nav-active" /></div>
+        <HowItWorks />
         <ShortcutHint />
         <UserCard />
       </aside>
@@ -135,7 +146,8 @@ export function AppLayout() {
               transition={{ type: 'spring', stiffness: 380, damping: 36 }}>
               <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-white/20" />
               <SideNav totals={totals} layoutKey="nav-active-mobile" onNavigate={() => setMoreOpen(false)} />
-              <div className="mt-4"><UserCard /></div>
+              <div className="mt-2"><HowItWorks onNavigate={() => setMoreOpen(false)} /></div>
+              <UserCard />
             </motion.div>
           </div>
         )}

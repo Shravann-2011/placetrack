@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { fmtDay, sameDay, timeLabel } from '../lib/calendar';
@@ -11,6 +11,7 @@ import { ChartCard, FunnelChart, SourceChart, WeeklyChart } from '../components/
 import { CountUp } from '../components/CountUp';
 import { motion } from 'motion/react';
 import { ApplicationFormModal } from '../components/ApplicationForm';
+import { ExplainedButton, WelcomeGuide } from '../components/Explainers';
 import { PasteModal } from '../components/PasteModal';
 import { ApplicationDrawer } from '../components/ApplicationDrawer';
 
@@ -106,19 +107,34 @@ export default function DashboardPage() {
   }, [reloadKey]);
 
   const firstName = user?.name?.split(' ')[0];
+
+  // First visit (or "How it works" in the menu): show the two ways to add a company
+  const guideKey = `placetrack-guide-seen-${user?._id}`;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [guideOpen, setGuideOpen] = useState(() => {
+    try { return !localStorage.getItem(guideKey); } catch { return false; }
+  });
+  useEffect(() => { if (searchParams.get('guide')) setGuideOpen(true); }, [searchParams]);
+  const closeGuide = () => {
+    setGuideOpen(false);
+    try { localStorage.setItem(guideKey, '1'); } catch { /* storage blocked */ }
+    if (searchParams.get('guide')) setSearchParams({}, { replace: true });
+  };
   const header = (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 className="display text-4xl text-ink sm:text-5xl">{greeting()}, {firstName} 👋</h1>
         <p className="mt-2 text-sm text-slate-600">Here’s how your placement season is going.</p>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <button className="btn-lime" onClick={() => setPasting(true)}><Icon name="sparkles" /> Paste a message</button>
-        <button className="btn-primary" onClick={() => setAdding(true)}><Icon name="plus" /> Add application</button>
+      <div className="flex flex-wrap gap-3">
+        <ExplainedButton kind="paste" className="btn-lime" onClick={() => setPasting(true)}><Icon name="paste" /> Paste a message</ExplainedButton>
+        <ExplainedButton kind="add" className="btn-primary" onClick={() => setAdding(true)}><Icon name="plus" /> Add application</ExplainedButton>
       </div>
     </div>
   );
-  const pasteModal = <PasteModal open={pasting} onClose={() => setPasting(false)} onAdded={() => setReloadKey((k) => k + 1)} />;
+  const guide = <WelcomeGuide open={guideOpen} name={firstName} onClose={closeGuide}
+    onPaste={() => { closeGuide(); setPasting(true); }} onAdd={() => { closeGuide(); setAdding(true); }} />;
+  const pasteModal = <><PasteModal open={pasting} onClose={() => setPasting(false)} onAdded={() => setReloadKey((k) => k + 1)} />{guide}</>;
   const modal = <ApplicationFormModal open={adding} application={adding ? {} : null} onClose={() => setAdding(false)} onSaved={() => setReloadKey((k) => k + 1)} />;
 
   if (error) return <div className="animate-fade-in">{header}<div className="card mt-6"><EmptyState icon="alert" title="Couldn’t load your dashboard">{error}</EmptyState></div></div>;

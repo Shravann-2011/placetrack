@@ -33,7 +33,7 @@ export function Spinner({ className = 'size-5' }) {
 export function EmptyState({ icon = 'inbox', title, children, action }) {
   return (
     <div className="flex flex-col items-center px-6 py-16 text-center">
-      <div className="mb-4 grid size-12 place-items-center rounded-xl bg-brand-50 text-brand-600">
+      <div className="animate-float mb-4 grid size-12 place-items-center rounded-xl bg-lime text-ink shadow-[2px_2px_0_0_var(--color-ink)]">
         <Icon name={icon} className="size-6" />
       </div>
       <h3 className="text-base font-semibold text-slate-900">{title}</h3>

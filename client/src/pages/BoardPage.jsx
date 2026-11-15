@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { STAGES, STAGE_STYLES } from '../lib/constants';
 import { describeDue, formatCtc } from '../lib/format';
@@ -10,6 +10,12 @@ import { ApplicationDrawer } from '../components/ApplicationDrawer';
 import { ApplicationFormModal } from '../components/ApplicationForm';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { celebrate } from '../lib/confetti';
+import { useAuth } from '../context/AuthContext';
+import { BADGES, STAGE_XP, computeProgress, xpForMove } from '../lib/progress';
+import { BadgeUnlocks, BadgesModal, GameBar, LevelUp, RoundPips } from '../components/BoardGame';
+
+// Column headers: the path of rounds, like levels in a game
+const ROUND_NO = { Applied: 'Start', 'Aptitude/OA': 'Round 1', GD: 'Round 2', Technical: 'Round 3', HR: 'Round 4', Offer: 'Goal', Rejected: 'Closed' };
 
 const DUE_PILL = {
   urgent: 'bg-rose-50 text-rose-700',
@@ -44,8 +50,8 @@ function BoardCard({ app, onOpen, onMove, onDragStart, onDragEnd, dragging }) {
       draggable
       onDragStart={(e) => onDragStart(e, app)}
       onDragEnd={onDragEnd}
-      className={`group cursor-grab rounded-xl border border-slate-200 bg-white p-3 shadow-xs transition hover:border-slate-300 hover:shadow-md active:cursor-grabbing ${
-        dragging ? 'rotate-1 opacity-40' : ''}`}>
+      className={`group cursor-grab rounded-xl border bg-white p-3 shadow-xs transition hover:shadow-md active:cursor-grabbing ${
+        app.stage === 'Offer' ? 'border-emerald-300' : 'border-[#e8e2cf] hover:border-ink/30'} ${dragging ? 'rotate-2 opacity-40' : ''}`}>
       <div className="flex items-start gap-2.5">
         <CompanyAvatar name={app.company} size="size-8" />
         <button onClick={() => onOpen(app)} className="min-w-0 flex-1 text-left">
@@ -62,6 +68,7 @@ function BoardCard({ app, onOpen, onMove, onDragStart, onDragEnd, dragging }) {
           </span>
         ) : <span className="text-slate-400">{app.type === 'Internship' ? 'Internship' : app.source}</span>}
       </div>
+      <RoundPips app={app} />
     </article>
     </motion.div>
   );
@@ -81,6 +88,29 @@ export default function BoardPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const dragApp = useRef(null);
   const toast = useToast();
+  const { user } = useAuth();
+  const [floats, setFloats] = useState([]); // "+20 XP" bubbles rising from a column
+  const [levelUp, setLevelUp] = useState(null);
+  const [unlocks, setUnlocks] = useState([]);
+  const [badgesOpen, setBadgesOpen] = useState(false);
+  const progress = useMemo(() => (apps ? computeProgress(apps) : null), [apps]);
+
+  // Badges already shown to this student, so "Badge unlocked" only appears for new ones
+  const seenKey = `placetrack-badges-${user?._id}`;
+  const readSeen = useCallback(() => { try { return JSON.parse(localStorage.getItem(seenKey)) || null; } catch { return null; } }, [seenKey]);
+  const writeSeen = useCallback((ids) => { try { localStorage.setItem(seenKey, JSON.stringify(ids)); } catch { /* storage blocked */ } }, [seenKey]);
+  useEffect(() => {
+    if (!progress) return;
+    const seen = readSeen();
+    if (!seen) { writeSeen([...progress.earned]); return; } // first visit: no burst of old badges
+    const fresh = [...progress.earned].filter((id) => !seen.includes(id));
+    if (fresh.length) {
+      setUnlocks((u) => [...u, ...BADGES.filter((b) => fresh.includes(b.id))]);
+      writeSeen([...seen, ...fresh]);
+    }
+  }, [progress, readSeen, writeSeen]);
+  const dismissUnlock = useCallback((id) => setUnlocks((u) => u.filter((b) => b.id !== id)), []);
+  const clearLevelUp = useCallback(() => setLevelUp(null), []);
 
   useEffect(() => {
     let ignore = false;
@@ -101,13 +131,23 @@ export default function BoardPage() {
   const move = async (app, stage) => {
     if (!app || app.stage === stage) return;
     const before = apps;
+    const gain = xpForMove(app, stage);
+    const levelBefore = progress?.level;
     // Optimistic: move the card now (to the top of its new column), roll back if the API fails
     setApps((list) => [{ ...app, stage }, ...list.filter((a) => a._id !== app._id)]);
     try {
       const res = await api(`/applications/${app._id}/stage`, { method: 'PATCH', body: { stage } });
-      setApps((list) => list.map((a) => (a._id === app._id ? res.data : a)));
-      if (stage === 'Offer') celebrate();
-      toast(stage === 'Offer' ? `🎉 Offer from ${app.company}! Congratulations!` : `${app.company} moved to ${stage}`);
+      const next = before.map((a) => (a._id === app._id ? res.data : a));
+      setApps([res.data, ...next.filter((a) => a._id !== app._id)]);
+      if (gain) {
+        const id = crypto.randomUUID();
+        setFloats((f) => [...f, { id, stage, gain }]);
+        setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 1400);
+      }
+      const levelAfter = computeProgress(next).level;
+      if (levelBefore && levelAfter > levelBefore) { setLevelUp(levelAfter); celebrate(); }
+      else if (stage === 'Offer') celebrate();
+      toast(stage === 'Offer' ? `Offer from ${app.company}. +${gain} XP` : stage === 'Rejected' ? `${app.company} moved to Rejected. Your XP and badges stay.` : gain ? `${app.company} cleared to ${stage}. +${gain} XP` : `${app.company} moved to ${stage}`);
     } catch (err) {
       setApps(before);
       toast(err.message, 'error');
@@ -147,8 +187,8 @@ export default function BoardPage() {
         <div>
           <h1 className="display text-4xl text-ink sm:text-5xl">Board</h1>
           <p className="mt-2 text-sm text-slate-600">
-            <span className="hidden sm:inline">Drag cards between rounds as you progress.</span>
-            <span className="sm:hidden">Tap ⌄ on a card to move it to another round.</span>
+            <span className="hidden sm:inline">Drag a card to the next round when you clear it. Every round you clear earns XP.</span>
+            <span className="sm:hidden">Tap ⌄ on a card to move it. Every round you clear earns XP.</span>
           </p>
         </div>
         <div className="flex gap-2">
@@ -159,6 +199,8 @@ export default function BoardPage() {
           <button className="btn-primary" onClick={() => setEditing({})}><Icon name="plus" /><span className="hidden sm:inline">Add</span></button>
         </div>
       </div>
+
+      {progress && <GameBar progress={progress} onBadges={() => setBadgesOpen(true)} />}
 
       {total > 100 && (
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">Showing your 100 most recently updated applications.</p>
@@ -172,15 +214,29 @@ export default function BoardPage() {
           {columns.map(({ stage, items }) => {
             const s = STAGE_STYLES[stage];
             const isOver = overStage === stage && dragApp.current?.stage !== stage;
+            const dropGain = draggingId && dragApp.current ? xpForMove(dragApp.current, stage) : 0; // XP waiting in this column while dragging
             return (
               <section key={stage} {...columnHandlers(stage)} aria-label={`${stage} column, ${items.length} application${items.length === 1 ? "" : "s"}`}
-                className={`flex w-[17rem] shrink-0 snap-start flex-col rounded-2xl border p-2.5 transition-colors ${
-                  isOver ? 'border-brand-300 bg-brand-50/70 ring-4 ring-brand-100' : 'border-slate-200/70 bg-slate-100/60'}`}>
-                <header className="flex items-center gap-2 px-1.5 pb-3 pt-1">
-                  <span className={`size-2 rounded-full ${s.dot}`} aria-hidden="true" />
-                  <h2 className="text-sm font-semibold text-slate-800">{stage}</h2>
-                  <motion.span key={apps ? items.length : 'x'} initial={{ scale: 0.7 }} animate={{ scale: 1 }}
-                    className="rounded-full bg-white px-2 text-xs font-medium text-slate-500 tabular-nums ring-1 ring-slate-200">{apps ? items.length : '·'}</motion.span>
+                className={`flex w-[17rem] shrink-0 snap-start flex-col rounded-2xl border p-2.5 transition-all duration-200 ${
+                  isOver ? 'border-ink/40 bg-lime/25 ring-4 ring-lime/40' : dropGain ? 'border-lime bg-lime/10' : stage === 'Offer' ? 'border-emerald-200 bg-emerald-50/60' : stage === 'Rejected' ? 'border-slate-200/70 bg-slate-100/40 opacity-90' : 'border-[#e8e2cf] bg-sand/50'}`}>
+                <header className="relative px-1.5 pb-3 pt-1">
+                  <p className={`text-[10px] font-bold uppercase tracking-[0.14em] ${stage === 'Offer' ? 'text-emerald-800' : 'text-slate-400'}`}>{ROUND_NO[stage]}</p>
+                  <div className="mt-0.5 flex items-center gap-2">
+                    {stage === 'Offer' ? <Icon name="trophy" className="size-4 text-emerald-700" /> : <span className={`size-2 rounded-full ${s.dot}`} aria-hidden="true" />}
+                    <h2 className="text-sm font-bold text-ink">{stage}</h2>
+                    <motion.span key={apps ? items.length : 'x'} initial={{ scale: 0.7 }} animate={{ scale: 1 }}
+                      className="rounded-full bg-white px-2 text-xs font-semibold text-slate-500 tabular-nums ring-1 ring-slate-200">{apps ? items.length : '·'}</motion.span>
+                    {STAGE_XP[stage] && stage !== 'Applied' && (
+                      <span className={`ml-auto rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${dropGain ? 'bg-lime text-ink' : 'bg-white/70 text-slate-500'}`}>+{STAGE_XP[stage]} XP</span>
+                    )}
+                  </div>
+                  <AnimatePresence>
+                    {floats.filter((f) => f.stage === stage).map((f) => (
+                      <motion.span key={f.id} className="pointer-events-none absolute right-2 top-0 z-10 rounded-lg bg-lime px-2 py-1 font-display text-sm text-ink shadow-[2px_2px_0_0_var(--color-ink)]"
+                        initial={{ opacity: 0, y: 10, scale: 0.6 }} animate={{ opacity: 1, y: -26, scale: 1 }} exit={{ opacity: 0, y: -48 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 18 }}>+{f.gain} XP</motion.span>
+                    ))}
+                  </AnimatePresence>
                 </header>
                 <div className="flex min-h-24 flex-1 flex-col gap-2">
                   {!apps
@@ -196,10 +252,12 @@ export default function BoardPage() {
                   {apps && items.length === 0 && (
                     <div className={`grid flex-1 place-items-center rounded-xl border-2 border-dashed px-3 py-6 text-center text-xs transition-colors ${
                       isOver ? 'border-brand-300 text-brand-700' : 'border-slate-200 text-slate-400'}`}>
-                      {isOver ? 'Drop here' : search ? 'No matches' : 'No applications'}
+                      {isOver ? (dropGain ? `Drop for +${dropGain} XP` : 'Drop here') : dropGain ? `+${dropGain} XP waiting` : search ? 'No matches' : stage === 'Offer' ? 'Your first offer goes here' : 'No applications'}
                     </div>
                   )}
-                  {isOver && items.length > 0 && <div className="h-2 rounded-full bg-brand-200" aria-hidden="true" />}
+                  {isOver && items.length > 0 && (
+                    <div className="rounded-xl border-2 border-dashed border-ink/30 py-2 text-center text-xs font-bold text-ink" aria-hidden="true">{dropGain ? `Drop for +${dropGain} XP` : 'Drop here'}</div>
+                  )}
                 </div>
               </section>
             );
@@ -208,6 +266,9 @@ export default function BoardPage() {
         </LayoutGroup>
       </div>
 
+      <BadgesModal open={badgesOpen} onClose={() => setBadgesOpen(false)} earned={progress?.earned || new Set()} />
+      <LevelUp level={levelUp} onDone={clearLevelUp} />
+      <BadgeUnlocks items={unlocks} onDismiss={dismissUnlock} />
       <ApplicationDrawer application={viewing} onClose={() => setViewing(null)}
         onChanged={(a) => setApps((list) => list.map((x) => (x._id === a._id ? a : x)))}
         onEdit={(a) => { setViewing(null); setEditing(a); }} onDelete={(a) => { setViewing(null); setDeleting(a); }} />
